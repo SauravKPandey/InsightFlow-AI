@@ -18,6 +18,17 @@ This document captures major business, product, architecture, and technology dec
 
 A decision is considered finalized only after it has been recorded in this document.
 
+----
+
+## DEC-000
+
+All approved business, architecture and data modeling decisions
+shall be recorded in the Decision Log immediately upon approval.
+
+Rationale:
+Ensures traceability, prevents decision loss and maintains
+consistency across project artifacts.
+
 ---
 
 ## DEC-001
@@ -433,14 +444,14 @@ A Product can have multiple Plans.
 
 ### Example
 
-```text
+
 Analytics Cloud
 ├── FREE
 ├── STANDARD
 ├── PREMIUM
 ├── ENTERPRISE
 └── CUSTOM
-```
+ ggg
 
 ### Status
 
@@ -1000,22 +1011,506 @@ Document retrieval and business analytics retrieval
 represent different retrieval patterns and should be
 architected independently.
 
+status 
+
+Approved
+------
+
+DEC-042
+
+A customer account may have multiple active subscriptions simultaneously.
+
+Each subscription shall be associated with a single product.
+
+Rationale:
+Enterprise customers commonly purchase multiple products
+and maintain independent subscription lifecycles for each.
+
+status 
+
+Approved
+
 -----------------------------
 
 ## Business Entity Model Status:
 
 ### Frozen:
+
+Operational Entities
+--------------------
 Tenant
-Product Category
+Customer
 Product
-Plan
-Customer Account
 Subscription
+Invoice
 Payment
 User
+Feature
 Usage Event
 
 
+Reference Entities
+------------------
+Country
+Region
+Customer Segment
+Acquisition Channel
+Product Category
+
+
+Analytics Entity
+--------------
+Forecast
+
+## Future entity
+
+Support Ticket
+Campaign
+Partner
+
+--------------
+
+DEC-043
+
+Title:
+Primary Key Strategy for Dimensions and Fact Tables
+
+Decision:
+InsightFlow AI shall use surrogate keys for dimension tables and immutable business/event identifiers for fact tables.
+
+Dimension Tables:
+- dim_tenant        → tenant_key
+- dim_customer      → customer_key
+- dim_product       → product_key
+- dim_subscription  → subscription_key
+- dim_user          → user_key
+- dim_feature       → feature_key
+- dim_country       → country_key
+- dim_region        → region_key
+- dim_customer_segment → customer_segment_key
+- dim_acquisition_channel → acquisition_channel_key
+
+Fact Tables:
+- fact_subscription_event → subscription_event_id
+- fact_payment            → payment_id
+- fact_invoice            → invoice_id
+- fact_usage_event        → usage_event_id
+- fact_forecast           → forecast_id
+
+Fact Table Foreign Keys:
+Fact tables shall reference dimension tables using surrogate keys.
+
+Example:
+fact_subscription_event
+- subscription_event_id (PK)
+- tenant_key (FK)
+- customer_key (FK)
+- product_key (FK)
+- subscription_key (FK)
+
+Rationale:
+1. Surrogate keys are required to support SCD Type 2 dimensions.
+2. Immutable business/event identifiers provide traceability back to source systems.
+3. BigQuery does not require integer surrogate keys on fact tables for performance.
+4. This approach simplifies debugging, lineage tracking, and event reconciliation.
+5. The design aligns with modern cloud data warehouse practices while preserving dimensional modeling principles.
+
+Status
+
+Approved
+
+---
+
+DEC-044
+
+Fact Table: fact_payment
+
+Grain:
+One row per payment attempt.
+
+Business Rules:
+1. An invoice may have multiple payment attempts.
+2. An invoice may have multiple FAILED or PENDING payment attempts.
+3. An invoice shall have at most one SUCCESSFUL payment.
+4. Additional successful payments against the same invoice shall be treated as overpayments and handled through refund/reconciliation processes.
+5. Refund transactions shall be stored in fact_payment as payment event types.
+
+Rationale:
+Supports payment retry analysis, revenue collection analysis, payment success rate calculations, and financial reconciliation while maintaining a complete payment history.
+
+status 
+
+Approved
+---
+
+DEC-045
+
+Entity: Tenant
+
+Decision:
+Tenant shall contain industry as a business attribute.
+
+Examples:
+- SaaS
+- FinTech
+- Healthcare
+- Retail
+- Manufacturing
+
+Rationale:
+Industry-based benchmarking, adoption analysis, revenue analysis,
+and future cross-tenant intelligence capabilities may require
+tenant industry classification.
+
+status
+
+Approved
+---
+
+DEC-046
+
+Entity: Customer Account
+
+Decision:
+Customer Tier shall be supported as a customer segmentation attribute.
+
+Examples:
+- Enterprise
+- Mid-Market
+- SMB
+
+or
+
+- Gold
+- Silver
+- Bronze
+
+Rationale:
+Customer tier is commonly used for segmentation,
+reporting, customer success prioritization, churn analysis,
+and forecasting.
+
+Status 
+
+Approved
+---
+
+DEC-047
+
+Entity: Feature
+
+Decision:
+A Feature shall belong to exactly one Product.
+
+Relationship:
+Product (1) → (M) Feature
+
+Rationale:
+1. Simplifies product adoption analytics.
+2. Simplifies feature adoption calculations.
+3. Simplifies customer health scoring.
+4. Simplifies dimensional modeling and reporting.
+5. Shared features across products can be supported in future through a Product-Feature bridge table if required.
+
+Status 
+
+Approved
+---
+
+DEC-048
+
+Entity: Feature
+
+Decision:
+Feature shall support a premium feature indicator.
+
+Attribute:
+feature_is_premium
+
+Allowed Values:
+TRUE
+FALSE
+
+Rationale:
+1. Enables premium feature adoption analytics.
+2. Supports expansion opportunity identification.
+3. Supports customer health analysis.
+4. Supports future product intelligence use cases.
+5. Enables premium feature usage reporting and monetization analysis.
+
+status
+
+Approved
+---
+
+DEC-049
+
+Entity: Subscription
+
+Decision:
+Subscription shall support both purchased seat count and assigned seat count.
+
+Attributes:
+- purchased_seat_count
+- assigned_seat_count
+
+Rationale:
+1. Enables seat utilization analysis.
+2. Supports customer health scoring.
+3. Supports expansion opportunity identification.
+4. Supports product adoption analysis.
+5. Enables SaaS utilization KPIs.
+
+Example:
+
+Purchased Seats = 100
+Assigned Seats = 60
+
+Seat Utilization = 60%
+
+Status
+
+Approved
+---
+
+DEC-050
+
+Entity: Invoice
+
+Decision:
+Invoice and Payment shall be modeled as separate business entities.
+
+Invoice service period attributes shall not be included in MVP.
+
+
+Relationship:
+Invoice (1) → Payment (Many)
+
+
+Implementation:
+payment.invoice_id shall be used as the foreign key.
+
+
+Excluded Attributes:
+- invoice_period_start_date
+- invoice_period_end_date
+
+Rationale:
+
+Supports multiple payment attempts per invoice.
+Supports failed payment tracking.
+Supports payment retry analytics.
+Supports payment success rate calculations.
+Aligns with standard relational modeling principles.
+Current platform scope focuses on subscription analytics,
+customer intelligence, forecasting and decision intelligence.
+
+Revenue recognition and service period accounting are outside
+the MVP scope and may be introduced in future releases if required.
+
+status
+Approved
+---
+
+DEC-051
+
+Entity: Payment
+
+Decision:
+Payment shall support payment failure reason tracking.
+
+Attribute:
+failure_reason
+
+Examples:
+- INSUFFICIENT_FUNDS
+- CARD_DECLINED
+- NETWORK_ERROR
+- GATEWAY_TIMEOUT
+- FRAUD_CHECK_FAILED
+- PAYMENT_CANCELLED
+
+Rationale:
+1. Enables payment failure analysis.
+2. Supports payment retry optimization.
+3. Supports payment intelligence dashboards.
+4. Enables AI-driven payment insights.
+5. Supports gateway performance analysis.
+
+status
+Approved
+---
+
+DEC-052
+
+Entity: User
+
+Decision:
+User shall support role-based classification.
+
+Attribute:
+user_role
+
+Examples:
+- ADMIN
+- POWER_USER
+- STANDARD_USER
+- READ_ONLY
+
+Rationale:
+1. Enables feature adoption analysis by user role.
+2. Supports power user identification.
+3. Supports customer health scoring.
+4. Supports expansion opportunity analysis.
+5. Provides additional signals for churn prediction models.
+
+status
+
+Approved
+---
+DEC-053
+
+Entity: Usage Event
+
+Decision:
+Usage Event shall support a numeric event value.
+
+Attribute:
+event_value
+
+Default Value:
+1
+
+Examples:
+
+LOGIN
+event_value = 1
+
+API_CALLED
+event_value = 500
+
+EXPORT_COMPLETED
+event_value = 25
+
+Rationale:
+1. Supports feature consumption analytics.
+2. Supports API usage analysis.
+3. Supports advanced product adoption metrics.
+4. Enables future usage-based billing models.
+5. Provides richer signals for customer health and AI models.
+
+status
+
+Approved
+---
+
+DEC-054
+
+Entity: Pricing Plan
+
+Decision:
+Pricing shall be modeled as a separate business entity rather than as attributes on Product.
+
+Relationship:
+Product (1) → Pricing Plan (Many)
+Pricing Plan (1) → Subscription (Many)
+
+Rationale:
+1. Supports multiple billing frequencies.
+2. Supports seat-based pricing.
+3. Supports historical price tracking.
+4. Supports future pricing changes.
+5. Preserves subscription pricing history.
+
+status
+
+Approved
+---
+
+DEC-055
+
+Entities:
+Pricing Plan
+Subscription
+
+Decision:
+Pricing Plan shall store list pricing, while Subscription shall store contracted pricing.
+
+Pricing Plan Attributes:
+- base_price
+- billing_frequency
+- currency
+
+Subscription Attributes:
+- subscription_amount
+
+Rationale:
+1. Supports customer-specific negotiated pricing.
+2. Supports enterprise discounting.
+3. Supports grandfathered pricing.
+4. Preserves contracted revenue values.
+5. Supports accurate ARR and MRR calculations.
+6. Prevents historical revenue changes when list prices are updated.
+
+Example:
+
+Pricing Plan:
+Monthly Pro = $100/month
+
+Customer A Subscription:
+Contracted Price = $80/month
+
+Customer B Subscription:
+Contracted Price = $90/month 
+
+status 
+Approvedd
+---
+
+DEC-056
+
+Entities:
+Country
+Region
+
+Decision:
+Country and Region shall be modeled as separate reference entities.
+
+Relationship:
+Region (1) → Country (Many)
+
+Customer Account shall be associated with Country.
+
+Region shall be derived through Country.
+
+Rationale:
+1. Prevents inconsistent geography assignments.
+2. Eliminates duplicate region storage.
+3. Simplifies maintenance of geographic hierarchies.
+4. Supports standardized reporting across tenants.
+
+Example:
+
+APAC
+ ├── India
+ ├── Singapore
+ └── Australia
+
+Customer
+    ↓
+India
+    ↓
+APAC
+
+status
+
+Approved
+---
+
+
+
+
+-------------
 
 ## Decision Logging Rules
 
