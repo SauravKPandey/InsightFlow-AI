@@ -979,6 +979,26 @@ KPI Definitions shall serve as the authoritative source for all business metric 
 Status
 
 Approved
+------
+
+DEC-041
+
+AI Architecture shall consist of two independent knowledge systems:
+
+1. Document Knowledge System
+   - Powered by RAG and Vector Search
+   - Used for business definitions, KPI definitions,
+     architecture knowledge and governance.
+
+2. Analytics Knowledge System
+   - Powered by Semantic Layer and BigQuery
+   - Used for KPI retrieval, trend analysis,
+     forecasting and business insights.
+
+Rationale:
+Document retrieval and business analytics retrieval
+represent different retrieval patterns and should be
+architected independently.
 
 -----------------------------
 
