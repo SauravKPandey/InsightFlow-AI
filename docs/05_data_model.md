@@ -927,3 +927,570 @@ Forecast
 Version: 1.0
 
 Status: Approved & Frozen
+
+# Section 3: Dimensional Data Model
+
+## Purpose
+
+The Dimensional Data Model provides an analytics-optimized representation of business data for reporting, KPI computation, forecasting, customer intelligence, and AI-driven insights.
+
+The dimensional model follows a hybrid Kimball approach using:
+
+* Dimensions for business entities and descriptive attributes
+* Facts for business events and measurable activities
+* Surrogate Keys for all dimensions
+* SCD strategies based on business requirements
+
+---
+
+# Dimension Inventory
+
+| Dimension               | Business Key           | Surrogate Key           | SCD Type |
+| ----------------------- | ---------------------- | ----------------------- | -------- |
+| dim_tenant              | tenant_id              | tenant_key              | SCD2     |
+| dim_customer            | customer_id            | customer_key            | SCD2     |
+| dim_subscription        | subscription_id        | subscription_key        | SCD2     |
+| dim_product             | product_id             | product_key             | SCD1     |
+| dim_pricing_plan        | pricing_plan_id        | pricing_plan_key        | SCD2     |
+| dim_feature             | feature_id             | feature_key             | SCD1     |
+| dim_user                | user_id                | user_key                | SCD2     |
+| dim_country             | country_code           | country_key             | SCD0     |
+| dim_region              | region_id              | region_key              | SCD0     |
+| dim_customer_segment    | customer_segment_id    | customer_segment_key    | SCD1     |
+| dim_acquisition_channel | acquisition_channel_id | acquisition_channel_key | SCD0     |
+| dim_date                | calendar_date          | date_key                | SCD0     |
+
+---
+
+# dim_tenant
+
+## Purpose
+
+Stores tenant metadata and historical tenant changes.
+
+## Keys
+
+```text
+tenant_key (SK)
+tenant_id (BK)
+```
+
+## SCD Strategy
+
+```text
+SCD Type 2
+```
+
+## Attributes
+
+```text
+tenant_key
+tenant_id
+
+tenant_name
+tenant_status
+
+industry
+website
+
+tenant_start_date
+tenant_end_date
+
+effective_from_date
+effective_to_date
+
+is_current
+
+created_timestamp
+updated_timestamp
+```
+
+---
+
+# dim_customer
+
+## Purpose
+
+Stores customer metadata and historical customer changes.
+
+Supports customer intelligence, churn analytics, forecasting, and customer health.
+
+## Keys
+
+```text
+customer_key (SK)
+customer_id (BK)
+```
+
+## SCD Strategy
+
+```text
+SCD Type 2
+```
+
+## Attributes
+
+```text
+customer_key
+customer_id
+
+customer_name
+customer_status
+
+industry
+customer_size
+customer_tier
+
+country_key
+country_name
+
+region_key
+region_name
+
+acquisition_channel_key
+customer_segment_key
+
+customer_start_date
+customer_end_date
+
+effective_from_date
+effective_to_date
+
+is_current
+
+created_timestamp
+updated_timestamp
+```
+
+---
+
+# dim_subscription
+
+## Purpose
+
+Stores historical subscription state.
+
+Supports ARR, MRR, renewals, churn, expansion, contraction, forecasting, and seat utilization analytics.
+
+## Keys
+
+```text
+subscription_key (SK)
+subscription_id (BK)
+```
+
+## SCD Strategy
+
+```text
+SCD Type 2
+```
+
+## Attributes
+
+```text
+subscription_key
+subscription_id
+
+customer_key
+product_key
+pricing_plan_key
+
+subscription_name
+subscription_status
+
+subscription_amount
+
+purchased_seat_count
+assigned_seat_count
+
+auto_renew_flag
+
+subscription_start_date
+subscription_end_date
+
+grace_period_end_date
+
+effective_from_date
+effective_to_date
+
+is_current
+
+created_timestamp
+updated_timestamp
+```
+
+---
+
+# dim_product
+
+## Purpose
+
+Stores product metadata.
+
+## Keys
+
+```text
+product_key (SK)
+product_id (BK)
+```
+
+## SCD Strategy
+
+```text
+SCD Type 1
+```
+
+## Attributes
+
+```text
+product_key
+product_id
+
+product_name
+product_description
+product_status
+
+product_category_id
+product_category_name
+
+product_launch_date
+product_retirement_date
+
+created_timestamp
+updated_timestamp
+```
+
+---
+
+# dim_pricing_plan
+
+## Purpose
+
+Stores pricing plan metadata and historical pricing changes.
+
+Supports ARR, MRR, pricing analytics, forecasting, and revenue intelligence.
+
+## Keys
+
+```text
+pricing_plan_key (SK)
+pricing_plan_id (BK)
+```
+
+## SCD Strategy
+
+```text
+SCD Type 2
+```
+
+## Attributes
+
+```text
+pricing_plan_key
+pricing_plan_id
+
+product_key
+
+pricing_plan_name
+
+base_price
+currency
+
+billing_frequency
+
+minimum_seats
+maximum_seats
+
+pricing_plan_status
+
+effective_from_date
+effective_to_date
+
+is_current
+
+created_timestamp
+updated_timestamp
+```
+
+---
+
+# dim_feature
+
+## Purpose
+
+Stores product feature metadata.
+
+Supports feature adoption analytics and product intelligence.
+
+## Keys
+
+```text
+feature_key (SK)
+feature_id (BK)
+```
+
+## SCD Strategy
+
+```text
+SCD Type 1
+```
+
+## Attributes
+
+```text
+feature_key
+feature_id
+
+product_key
+
+feature_name
+feature_description
+
+feature_type
+feature_status
+
+feature_is_premium
+
+feature_launch_date
+feature_retirement_date
+
+created_timestamp
+updated_timestamp
+```
+
+---
+
+# dim_user
+
+## Purpose
+
+Stores user metadata and historical user changes.
+
+Supports DAU, MAU, adoption analytics, customer health, and churn prediction.
+
+## Keys
+
+```text
+user_key (SK)
+user_id (BK)
+```
+
+## SCD Strategy
+
+```text
+SCD Type 2
+```
+
+## Attributes
+
+```text
+user_key
+user_id
+
+customer_key
+
+user_name
+email
+
+user_role
+user_status
+
+is_seat_assigned
+
+user_activation_date
+user_deactivation_date
+
+last_login_timestamp
+
+effective_from_date
+effective_to_date
+
+is_current
+
+created_timestamp
+updated_timestamp
+```
+
+---
+
+# dim_country
+
+## Keys
+
+```text
+country_key (SK)
+country_code (BK)
+```
+
+## SCD Strategy
+
+```text
+SCD Type 0
+```
+
+## Attributes
+
+```text
+country_key
+country_code
+
+country_name
+
+created_timestamp
+updated_timestamp
+```
+
+---
+
+# dim_region
+
+## Keys
+
+```text
+region_key (SK)
+region_id (BK)
+```
+
+## SCD Strategy
+
+```text
+SCD Type 0
+```
+
+## Attributes
+
+```text
+region_key
+region_id
+
+region_name
+region_description
+
+created_timestamp
+updated_timestamp
+```
+
+---
+
+# dim_customer_segment
+
+## Keys
+
+```text
+customer_segment_key (SK)
+customer_segment_id (BK)
+```
+
+## SCD Strategy
+
+```text
+SCD Type 1
+```
+
+## Attributes
+
+```text
+customer_segment_key
+customer_segment_id
+
+customer_segment_name
+customer_segment_description
+customer_segment_status
+
+created_timestamp
+updated_timestamp
+```
+
+---
+
+# dim_acquisition_channel
+
+## Keys
+
+```text
+acquisition_channel_key (SK)
+acquisition_channel_id (BK)
+```
+
+## SCD Strategy
+
+```text
+SCD Type 0
+```
+
+## Attributes
+
+```text
+acquisition_channel_key
+acquisition_channel_id
+
+acquisition_channel_name
+acquisition_channel_description
+acquisition_channel_status
+
+created_timestamp
+updated_timestamp
+```
+
+---
+
+# dim_date
+
+## Keys
+
+```text
+date_key (SK)
+```
+
+Example:
+
+```text
+20260710
+```
+
+## SCD Strategy
+
+```text
+SCD Type 0
+```
+
+## Attributes
+
+```text
+date_key
+
+calendar_date
+
+day_of_week
+day_name
+
+week_number
+
+month_number
+month_name
+
+quarter_number
+
+year_number
+
+is_weekend
+is_month_end
+is_quarter_end
+is_year_end
+```
+
+---
+
+# Dimensional Model Status
+
+Version: 1.0
+
+Status: Dimensions Approved & Frozen
+
+Pending:
+
+* Fact Table Design
+* Bronze/Silver/Gold Layer Mapping
+* Physical Data Model
+* Data Pipeline Design
+* Semantic Layer Design

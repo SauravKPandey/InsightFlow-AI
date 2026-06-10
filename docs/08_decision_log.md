@@ -833,7 +833,7 @@ User entity shall include organizational attributes.
 ```text
 department
 
-job_title
+job_titlef
 
 role
 ```
@@ -1041,6 +1041,7 @@ Operational Entities
 Tenant
 Customer
 Product
+Pricing Plan
 Subscription
 Invoice
 Payment
@@ -1507,8 +1508,213 @@ status
 Approved
 ---
 
+DEC-057
 
+Title:
+SCD Strategy for Dimensions
 
+Decision:
+InsightFlow shall support Slowly Changing Dimension Type 2 (SCD2) for business dimensions where historical changes are analytically significant.
+
+SCD2 Dimensions:
+- dim_customer
+- dim_pricing_plan
+- dim_user
+- dim_tenant
+
+SCD1 Dimensions:
+- dim_product
+- dim_feature
+- dim_customer_segment
+
+SCD0 Dimensions:
+- dim_country
+- dim_region
+- dim_acquisition_channel
+- dim_date
+
+Rationale:
+1. Preserves historical business context.
+2. Enables customer journey analytics.
+3. Supports expansion and churn analysis.
+4. Supports AI/ML feature generation.
+5. Preserves historical revenue attribution.
+
+status
+Approved
+---
+
+DEC-058
+
+Entity:
+dim_customer
+
+Decision:
+Country and Region attributes shall be denormalized into dim_customer.
+
+Attributes:
+- country_key
+- country_name
+- region_key
+- region_name
+
+Rationale:
+1. Simplifies analytical queries.
+2. Reduces joins.
+3. Aligns with dimensional modeling principles.
+4. Improves BI reporting performance.
+5. Supports common geographic aggregations.
+
+status 
+Aoorived
+---
+DEC-059
+
+Entity:
+dim_subscription
+
+Decision:
+Subscription shall be modeled as a Slowly Changing Dimension Type 2 (SCD2).
+
+Rationale:
+1. Subscription attributes change over time.
+2. Supports upgrade and downgrade analysis.
+3. Supports historical ARR and MRR calculations.
+4. Supports churn and renewal analytics.
+5. Supports expansion and contraction revenue tracking.
+
+Tracked Attributes:
+- subscription_status
+- subscription_amount
+- purchased_seat_count
+- assigned_seat_count
+- auto_renew_flag
+- pricing_plan
+
+status:
+Approved
+----
+
+DEC-060
+
+Entity:
+dim_subscription
+
+Decision:
+Contracted subscription pricing shall be stored in dim_subscription.
+
+Attribute:
+subscription_amount
+
+Rationale:
+1. Supports negotiated pricing.
+2. Supports customer-specific discounts.
+3. Supports grandfathered contracts.
+4. Preserves historical contract value.
+5. Pricing Plan stores list price while Subscription stores contracted price.
+
+Example:
+
+Pricing Plan:
+Annual Pro = ₹100,000
+
+Customer A Subscription:
+₹85,000
+
+Customer B Subscription:
+₹90,000
+
+status
+Approved
+---
+
+DEC-061
+
+Entity:
+dim_product
+
+Decision:
+Product Category shall be stored directly within dim_product.
+
+Attributes:
+- product_category_id
+- product_category_name
+
+Rationale:
+1. Product Category is small and relatively static.
+2. Product and Product Category are almost always analyzed together.
+3. Reduces joins in analytical queries.
+4. Aligns with Kimball dimensional modeling principles.
+5. Improves dashboard performance and usability.
+
+status
+Approved
+---
+
+DEC-062
+
+Entity:
+dim_pricing_plan
+
+Decision:
+Pricing Plan shall be modeled as a Slowly Changing Dimension Type 2 (SCD2).
+
+Rationale:
+1. Preserves pricing history.
+2. Supports historical ARR and MRR calculations.
+3. Supports pricing effectiveness analysis.
+4. Supports forecasting and trend analysis.
+5. Prevents historical financial metrics from changing when list prices are updated.
+
+Example:
+
+Annual Pro
+2026 = ₹100,000
+
+Annual Pro
+2027 = ₹120,000
+
+c
+-----
+DEC-063
+
+Entity:
+dim_user
+
+Decision:
+User shall maintain a direct relationship to Customer.
+
+Attribute:
+customer_key
+
+Rationale:
+1. Simplifies customer-level adoption analytics.
+2. Simplifies DAU and MAU calculations.
+3. Supports customer health scoring.
+4. Supports power-user identification.
+5. Reduces query complexity for user-centric analytics.
+
+status
+Approved
+---
+DEC-064
+
+Entity:
+dim_feature
+
+Decision:
+Feature shall be modeled as a Slowly Changing Dimension Type 1 (SCD1).
+
+Rationale:
+1. Feature attributes are primarily metadata.
+2. Historical feature metadata is not required for approved KPIs.
+3. Simplifies dimension maintenance.
+4. Reduces storage and ETL complexity.
+5. Feature usage history is already preserved in fact_usage_event.
+
+status
+Approved
+----
 
 -------------
 
