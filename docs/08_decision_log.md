@@ -1715,12 +1715,989 @@ Rationale:
 status
 Approved
 ----
+DEC-065
 
+Forecast removed as core business entity.
+
+Reason:
+Forecast is an analytical artifact generated from business data,
+not an operational business entity.
+
+Future analytical artifacts may include:
+- Forecast
+- Customer Health Score
+- Churn Prediction
+- Recommendations
 -------------
+
+DEC-066
+
+Title:
+Subscription Events Processing Layer
+
+Decision:
+A dedicated silver_subscription_event table shall be introduced.
+
+Flow:
+
+source_events
+      +
+derived_events
+      ↓
+silver_subscription_event
+      ↓
+fact_subscription_event
+
+Rationale:
+1. Maintains Bronze → Silver → Gold architecture consistency.
+2. Separates business event derivation from analytics consumption.
+3. Allows event validation and enrichment before Gold.
+4. Supports both source-generated and warehouse-derived events.
+5. Simplifies troubleshooting and reconciliation.
+
+---
+DEC-067
+
+Title:
+Silver as Canonical Business Layer
+
+Decision:
+
+Dimensions and Facts shall reside in Silver.
+
+Gold shall contain only business-consumption artifacts.
+
+Silver:
+- Dimensions
+- Facts
+- Trusted Business Data
+
+Gold:
+- KPI Tables
+- Aggregate Tables
+- AI Feature Tables
+- Forecast Outputs
+- Recommendation Outputs
+
+Rationale:
+
+1. Establishes Silver as the Single Source of Truth.
+2. Aligns with modern Lakehouse architecture patterns.
+3. Supports BI, Data Science, AI, and GenAI from a common business layer.
+4. Separates business facts from derived business insights.
+5. Improves scalability for future AI and forecasting use cases.
+
+---
+# Section 5: Physical Data Model
+
+## Purpose
+
+This section defines the physical implementation standards for InsightFlow on GCP. It establishes dataset organization, naming conventions, datatype standards, key generation strategy, SCD implementation, partitioning, clustering, incremental loading, and metadata management.
+
+---
+
+# 5.1 Physical Architecture Principles
+
+## Principle 1: Business First, Technology Second
+
+The physical implementation shall follow the approved:
+
+* Conceptual Model
+* Logical Model
+* Dimensional Model
+
+Technology choices must support the business model rather than drive it.
+
+---
+
+## Principle 2: Single Source of Truth
+
+The Silver layer shall serve as the canonical business layer.
+
+All dimensions and facts shall reside in Silver.
+
+---
+
+## Principle 3: Gold Contains Business Intelligence
+
+Gold shall contain only:
+
+* KPI tables
+* Aggregate tables
+* AI feature tables
+* Forecast outputs
+* Recommendation outputs
+
+Raw operational transactions shall not be stored in Gold.
+
+---
+
+## Principle 4: Schema Evolution Friendly
+
+The architecture must support:
+
+* New entities
+* New attributes
+* New event types
+* New KPIs
+
+without major redesign.
+
+---
+
+## Principle 5: Cloud-Native Design
+
+The solution shall be optimized for:
+
+* BigQuery
+* GCS
+* Kafka
+* Airflow / Cloud Composer
+* Dataproc (if required)
+
+---
+
+# 5.2 Dataset Design
+
+The platform shall use five primary datasets.
+
+## Landing
+
+Purpose:
+
+Temporary ingestion layer.
+
+Examples:
+
+```text
+landing.customer
+landing.subscription
+landing.payment
+```
+
+---
+
+## Bronze
+
+Purpose:
+
+Persistent raw storage.
+
+Examples:
+
+```text
+bronze.customer
+bronze.subscription
+bronze.invoice
+bronze.payment
+```
+
+---
+
+## Silver
+
+Purpose:
+
+Canonical business layer.
+
+Examples:
+
+```text
+silver.dim_customer
+silver.dim_subscription
+
+silver.fact_invoice
+silver.fact_payment
+```
+
+---
+
+## Gold
+
+Purpose:
+
+Business intelligence and AI layer.
+
+Examples:
+
+```text
+gold.agg_daily_arr
+gold.customer_health_score
+gold.forecast_revenue
+```
+
+---
+
+## Metadata
+
+Purpose:
+
+Operational control and monitoring.
+
+Examples:
+
+```text
+metadata.pipeline_run
+metadata.pipeline_watermark
+metadata.data_quality_results
+```
+
+---
+
+# 5.3 Naming Standards
+
+## Dataset Naming
+
+All dataset names shall be:
+
+* Lowercase
+* Singular
+
+Examples:
+
+```text
+landing
+bronze
+silver
+gold
+metadata
+```
+
+---
+
+## Bronze Tables
+
+Pattern:
+
+```text
+<entity_name>
+```
+
+Examples:
+
+```text
+customer
+subscription
+invoice
+payment
+```
+
+---
+
+## Silver Dimensions
+
+Pattern:
+
+```text
+dim_<entity>
+```
+
+Examples:
+
+```text
+dim_customer
+dim_subscription
+dim_product
+```
+
+---
+
+## Silver Facts
+
+Pattern:
+
+```text
+fact_<business_event>
+```
+
+Examples:
+
+```text
+fact_payment
+fact_invoice
+fact_usage_event
+fact_subscription_event
+```
+
+---
+
+## Gold Aggregates
+
+Pattern:
+
+```text
+agg_<metric>
+```
+
+Examples:
+
+```text
+agg_daily_arr
+agg_monthly_revenue
+```
+
+---
+
+## Gold Feature Tables
+
+Pattern:
+
+```text
+feature_<business_feature>
+```
+
+Examples:
+
+```text
+feature_customer_health
+feature_churn_prediction
+```
+
+---
+
+## Gold Forecast Tables
+
+Pattern:
+
+```text
+forecast_<metric>
+```
+
+Examples:
+
+```text
+forecast_revenue
+forecast_arr
+```
+
+---
+
+## Column Naming
+
+All column names shall use:
+
+```text
+snake_case
+```
+
+Examples:
+
+```text
+customer_id
+customer_name
+payment_amount
+event_timestamp
+```
+
+---
+
+## Key Naming
+
+Business Keys:
+
+```text
+customer_id
+subscription_id
+invoice_id
+payment_id
+```
+
+Surrogate Keys:
+
+```text
+customer_key
+subscription_key
+product_key
+pricing_plan_key
+```
+
+---
+
+# 5.4 Data Type Standards
+
+| Category        | Data Type |
+| --------------- | --------- |
+| Business Keys   | STRING    |
+| Surrogate Keys  | INT64     |
+| Currency Values | NUMERIC   |
+| Counts          | INT64     |
+| Dates           | DATE      |
+| Timestamps      | TIMESTAMP |
+| Flags           | BOOLEAN   |
+| Status Values   | STRING    |
+| Raw Payloads    | JSON      |
+
+---
+
+## Timestamp Standard
+
+All timestamps shall be stored in:
+
+```text
+UTC
+```
+
+---
+
+# 5.5 Surrogate Key Strategy
+
+## Standard
+
+Business Keys:
+
+```text
+STRING
+```
+
+Surrogate Keys:
+
+```text
+INT64
+```
+
+---
+
+## Generation Method
+
+Metadata-driven sequence generation.
+
+Control table:
+
+```text
+metadata.key_sequence
+```
+
+Example:
+
+| entity_name  | last_key_value |
+| ------------ | -------------- |
+| customer     | 1050           |
+| subscription | 890            |
+
+---
+
+## Unknown Member
+
+Every dimension shall contain:
+
+| surrogate_key | business_key |
+| ------------- | ------------ |
+| -1            | UNKNOWN      |
+
+Used for:
+
+* Late arriving dimensions
+* Data quality issues
+* Reconciliation scenarios
+
+---
+
+# 5.6 SCD2 Implementation Strategy
+
+## SCD2 Dimensions
+
+```text
+dim_customer
+
+dim_subscription
+
+dim_pricing_plan
+
+dim_user
+```
+
+---
+
+## SCD1 Dimensions
+
+```text
+dim_product
+
+dim_feature
+
+dim_country
+
+dim_region
+
+dim_customer_segment
+
+dim_acquisition_channel
+```
+
+---
+
+## Standard SCD2 Columns
+
+```text
+effective_from_date
+
+effective_to_date
+
+is_current
+```
+
+---
+
+## Open End Date
+
+Current record:
+
+```text
+effective_to_date = 9999-12-31
+```
+
+---
+
+## Current Record Identification
+
+```text
+is_current = TRUE
+```
+
+---
+
+## Fact Resolution Rule
+
+Facts shall resolve dimensions during load using:
+
+```text
+business_key
++
+event_date
+```
+
+and store the corresponding surrogate key.
+
+---
+
+## Fact Lineage Standard
+
+Fact tables shall retain both:
+
+```text
+surrogate_key
+```
+
+and
+
+```text
+business_key
+```
+
+Example:
+
+```text
+customer_key
+customer_id
+
+subscription_key
+subscription_id
+```
+
+This supports:
+
+* Historical accuracy
+* Reconciliation
+* Debugging
+* Lineage
+
+---
+
+# 5.7 Partitioning Standards
+
+## Partitioned Fact Tables
+
+### fact_usage_event
+
+Partition:
+
+```text
+event_timestamp
+```
+
+Granularity:
+
+```text
+DAY
+```
+
+---
+
+### fact_payment
+
+Partition:
+
+```text
+payment_processed_timestamp
+```
+
+Granularity:
+
+```text
+DAY
+```
+
+---
+
+### fact_subscription_event
+
+Partition:
+
+```text
+event_timestamp
+```
+
+Granularity:
+
+```text
+DAY
+```
+
+---
+
+### fact_invoice
+
+Partition:
+
+```text
+invoice_date
+```
+
+Granularity:
+
+```text
+MONTH
+```
+
+---
+
+## Dimensions
+
+No partitioning initially.
+
+---
+
+# 5.8 Clustering Standards
+
+## fact_usage_event
+
+Cluster by:
+
+```text
+customer_key
+user_key
+feature_key
+```
+
+---
+
+## fact_payment
+
+Cluster by:
+
+```text
+customer_key
+subscription_key
+```
+
+---
+
+## fact_invoice
+
+Cluster by:
+
+```text
+customer_key
+subscription_key
+```
+
+---
+
+## fact_subscription_event
+
+Cluster by:
+
+```text
+customer_key
+subscription_key
+```
+
+---
+
+## Dimensions
+
+No clustering initially.
+
+---
+
+# 5.9 Incremental Load Strategy
+
+## Streaming Sources
+
+Primary mechanism:
+
+```text
+Kafka
+```
+
+Examples:
+
+```text
+Usage Events
+
+Customer Change Events
+
+Subscription Events
+```
+
+---
+
+## Batch Sources
+
+Examples:
+
+```text
+Invoices
+
+Payments
+
+Reference Data
+
+MDM Data
+```
+
+---
+
+## Preferred Loading Strategy
+
+### Tier 1
+
+CDC (Preferred)
+
+Examples:
+
+```text
+Customer
+
+Subscription
+```
+
+---
+
+### Tier 2
+
+Timestamp-Based Incremental
+
+Pattern:
+
+```sql
+WHERE updated_timestamp > watermark
+```
+
+---
+
+### Tier 3
+
+Snapshot Comparison
+
+Used only when CDC and timestamps are unavailable.
+
+---
+
+## Watermark Management
+
+Control table:
+
+```text
+metadata.pipeline_watermark
+```
+
+Example:
+
+| pipeline_name | last_successful_timestamp |
+| ------------- | ------------------------- |
+| customer_load | 2026-07-10 10:00          |
+
+---
+
+## Reprocessing Support
+
+All pipelines shall support:
+
+```text
+start_date
+
+end_date
+```
+
+parameters.
+
+---
+
+## Late Arriving Dimensions
+
+Unknown dimensions shall be loaded using:
+
+```text
+surrogate_key = -1
+```
+
+and reconciled through scheduled correction jobs.
+
+---
+
+# 5.10 Metadata & Audit Framework
+
+## Metadata Dataset
+
+```text
+metadata
+```
+
+---
+
+## metadata.pipeline_run
+
+Tracks pipeline execution history.
+
+Key attributes:
+
+```text
+run_id
+pipeline_name
+start_timestamp
+end_timestamp
+status
+records_processed
+records_failed
+error_message
+```
+
+---
+
+## metadata.pipeline_watermark
+
+Tracks incremental load progress.
+
+Key attributes:
+
+```text
+pipeline_name
+last_successful_timestamp
+```
+
+---
+
+## metadata.data_quality_results
+
+Tracks DQ validation results.
+
+Key attributes:
+
+```text
+run_id
+table_name
+check_name
+check_status
+failed_record_count
+execution_timestamp
+```
+
+---
+
+## metadata.reconciliation_summary
+
+Tracks unresolved dimensions.
+
+Key attributes:
+
+```text
+table_name
+unknown_dimension
+record_count
+execution_timestamp
+```
+
+---
+
+## Audit Columns
+
+### Dimensions
+
+Mandatory:
+
+```text
+created_timestamp
+
+updated_timestamp
+
+source_system
+```
+
+---
+
+### Facts
+
+Mandatory:
+
+```text
+event_timestamp
+
+created_timestamp
+
+source_system
+```
+
+---
+
+## Error Handling Standard
+
+Missing dimensions shall not fail pipelines.
+
+Instead:
+
+```text
+surrogate_key = -1
+```
+
+shall be assigned and the issue logged for reconciliation.
+
+---
+
+## Operational Monitoring KPIs
+
+The platform shall monitor:
+
+```text
+Pipeline Success %
+
+Pipeline Duration
+
+Records Loaded
+
+Records Failed
+
+Unknown Dimension %
+
+Data Freshness
+```
+
+---
+
+# Section Status
+
+Section 5: Physical Data Model
+
+Status: APPROVED AND FROZEN
+
+Version: 1.0
+---
+
+
 
 ## Decision Logging Rules
 
-A decision should be logged if it impacts:
+A decision should be logged if it impacts:s
 
 * Business Scope
 * Product Direction
@@ -1730,5 +2707,4 @@ A decision should be logged if it impacts:
 * Governance
 * Budget
 * Delivery Approach
-
 Minor implementation details do not require decision log entries.
