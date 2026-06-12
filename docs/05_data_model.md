@@ -2493,6 +2493,965 @@ Status: APPROVED AND FROZEN
 Version: 1.0
 -----
 
+# Section 10: Semantic Layer & KPI Definitions
+
+## Purpose
+
+This section defines the business KPIs supported by InsightFlow, their ownership, calculation standards, and semantic governance principles. The objective is to establish a single, trusted definition for every business metric consumed by dashboards, reports, forecasting models, and AI applications.
+
+---
+
+# 10.1 Semantic Layer Principles
+
+## Principle 1: Single Definition of Truth
+
+Every KPI shall have one approved business definition and one approved calculation methodology.
+
+---
+
+## Principle 2: Silver is the Source Layer
+
+All KPI calculations shall originate from:
+
+* silver.fact_*
+* silver.dim_*
+
+Gold shall contain only KPI outputs, aggregates, forecasts, and AI-driven insights.
+
+---
+
+## Principle 3: Business Ownership
+
+Every KPI shall have a designated business owner responsible for approving definition changes.
+
+---
+
+## Principle 4: Reusable Metrics
+
+KPIs shall be defined once and reused across:
+
+* Dashboards
+* Reports
+* Forecasting Models
+* AI Agents
+* Executive Scorecards
+
+---
+
+# 10.2 Revenue Intelligence KPIs
+
+| KPI ID  | KPI Name                        | Business Owner |
+| ------- | ------------------------------- | -------------- |
+| KPI-001 | Monthly Recurring Revenue (MRR) | CFO            |
+| KPI-002 | Annual Recurring Revenue (ARR)  | CFO            |
+| KPI-003 | Revenue by Product              | CFO            |
+| KPI-004 | Revenue by Product Category     | CFO, CEO       |
+| KPI-005 | Revenue by Geography            | CFO            |
+| KPI-006 | Revenue Growth %                | CFO, CEO       |
+
+---
+
+## KPI-001 Monthly Recurring Revenue (MRR)
+
+Definition:
+
+Monthly recurring revenue generated from active paid subscriptions.
+
+Formula:
+
+MRR = Sum(Subscription Monthly Value)
+
+Where:
+
+* Monthly Plan = Plan Price
+* Quarterly Plan = Plan Price / 3
+* Annual Plan = Plan Price / 12
+
+Included:
+
+* Active subscriptions
+* Paid subscriptions
+* Recurring seat charges
+
+Excluded:
+
+* Trial subscriptions
+* Taxes
+* One-time charges
+* Refunds
+
+Source Tables:
+
+* dim_subscription
+* dim_pricing_plan
+
+---
+
+## KPI-002 Annual Recurring Revenue (ARR)
+
+Formula:
+
+ARR = MRR × 12
+
+Source Tables:
+
+* KPI-001 MRR
+
+---
+
+## KPI-003 Revenue by Product
+
+Formula:
+
+Sum(MRR) grouped by Product
+
+---
+
+## KPI-004 Revenue by Product Category
+
+Formula:
+
+Sum(MRR) grouped by Product Category
+
+---
+
+## KPI-005 Revenue by Geography
+
+Formula:
+
+Sum(MRR) grouped by Country / Region
+
+---
+
+## KPI-006 Revenue Growth %
+
+Formula:
+
+(Current Period Revenue − Previous Period Revenue) / Previous Period Revenue × 100
+
+---
+
+# 10.3 Subscription Lifecycle Intelligence KPIs
+
+| KPI ID  | KPI Name                   | Business Owner     |
+| ------- | -------------------------- | ------------------ |
+| KPI-007 | New Subscriptions          | Revenue Operations |
+| KPI-008 | Renewed Subscriptions      | Revenue Operations |
+| KPI-009 | Cancelled Subscriptions    | Revenue Operations |
+| KPI-010 | Active Subscriptions       | Revenue Operations |
+| KPI-011 | Grace Period Subscriptions | Revenue Operations |
+| KPI-012 | Expired Subscriptions      | Revenue Operations |
+
+---
+
+## KPI-007 New Subscriptions
+
+Formula:
+
+Count(subscription_created events)
+
+Source:
+
+* fact_subscription_event
+
+---
+
+## KPI-008 Renewed Subscriptions
+
+Formula:
+
+Count(subscription_renewed events)
+
+Source:
+
+* fact_subscription_event
+
+---
+
+## KPI-009 Cancelled Subscriptions
+
+Formula:
+
+Count(subscription_cancelled events)
+
+Source:
+
+* fact_subscription_event
+
+---
+
+## KPI-010 Active Subscriptions
+
+Formula:
+
+Count(active subscriptions)
+
+Condition:
+
+subscription_status = 'ACTIVE'
+
+Source:
+
+* dim_subscription
+
+---
+
+## KPI-011 Grace Period Subscriptions
+
+Formula:
+
+Count(subscriptions in grace period)
+
+---
+
+## KPI-012 Expired Subscriptions
+
+Formula:
+
+Count(expired subscriptions)
+
+---
+
+# 10.4 Product Adoption Intelligence KPIs
+
+| KPI ID  | KPI Name                   | Business Owner |
+| ------- | -------------------------- | -------------- |
+| KPI-013 | Daily Active Users (DAU)   | Product Team   |
+| KPI-014 | Monthly Active Users (MAU) | Product Team   |
+| KPI-015 | Feature Adoption Rate      | Product Team   |
+| KPI-016 | Seat Utilization           | Product Team   |
+| KPI-017 | Most Used Features         | Product Team   |
+
+---
+
+## KPI-013 Daily Active Users (DAU)
+
+Formula:
+
+Count(Distinct User) per Day
+
+Source:
+
+* fact_usage_event
+
+---
+
+## KPI-014 Monthly Active Users (MAU)
+
+Formula:
+
+Count(Distinct User) per Month
+
+Source:
+
+* fact_usage_event
+
+---
+
+## KPI-015 Feature Adoption Rate
+
+Formula:
+
+Users Using Feature / Eligible Users × 100
+
+Source:
+
+* fact_usage_event
+* dim_feature
+
+---
+
+## KPI-016 Seat Utilization
+
+Formula:
+
+Active Users / Purchased Seats × 100
+
+Source:
+
+* fact_usage_event
+* dim_subscription
+
+---
+
+## KPI-017 Most Used Features
+
+Formula:
+
+Rank Features by Usage Count
+
+Source:
+
+* fact_usage_event
+
+---
+
+# 10.5 Customer Health Intelligence KPIs
+
+| KPI ID  | KPI Name              | Business Owner   |
+| ------- | --------------------- | ---------------- |
+| KPI-018 | Customer Health Score | Customer Success |
+| KPI-019 | Healthy Customers     | Customer Success |
+| KPI-020 | At-Risk Customers     | Customer Success |
+| KPI-021 | Customer Tenure       | Customer Success |
+
+---
+
+## KPI-018 Customer Health Score
+
+Formula:
+
+* Product Usage = 40%
+* Subscription Health = 20%
+* Revenue Trend = 20%
+* Support Signals = 20%
+
+Score Range:
+
+0-100
+
+---
+
+## KPI-019 Healthy Customers
+
+Formula:
+
+Customer Health Score ≥ 80
+
+---
+
+## KPI-020 At-Risk Customers
+
+Formula:
+
+Customer Health Score < 50
+
+---
+
+## KPI-021 Customer Tenure
+
+Formula:
+
+Current Date − Customer Acquisition Date
+
+Source:
+
+* dim_customer
+
+---
+
+# 10.6 Churn Intelligence KPIs
+
+| KPI ID  | KPI Name            | Business Owner   |
+| ------- | ------------------- | ---------------- |
+| KPI-022 | Customer Churn Rate | Customer Success |
+| KPI-023 | Gross Revenue Churn | CFO              |
+| KPI-024 | Net Revenue Churn   | CFO              |
+| KPI-025 | Churn by Product    | Product Team     |
+
+---
+
+## KPI-022 Customer Churn Rate
+
+Formula:
+
+Churned Customers / Opening Customers × 100
+
+---
+
+## KPI-023 Gross Revenue Churn
+
+Formula:
+
+Revenue Lost From Churned Customers / Beginning Revenue × 100
+
+---
+
+## KPI-024 Net Revenue Churn
+
+Formula:
+
+(Revenue Lost From Churned Customers − Expansion Revenue) / Beginning Revenue × 100
+
+---
+
+## KPI-025 Churn by Product
+
+Formula:
+
+Cancelled Subscriptions grouped by Product
+
+---
+
+# 10.7 Predictive Intelligence KPIs
+
+| KPI ID  | KPI Name           | Business Owner   |
+| ------- | ------------------ | ---------------- |
+| KPI-026 | Forecasted Revenue | CFO              |
+| KPI-027 | Forecasted Churn   | Customer Success |
+| KPI-028 | At-Risk Revenue    | CFO              |
+
+---
+
+## KPI-026 Forecasted Revenue
+
+Source:
+
+* gold.forecast_revenue
+
+---
+
+## KPI-027 Forecasted Churn
+
+Source:
+
+* gold.forecast_churn
+
+---
+
+## KPI-028 At-Risk Revenue
+
+Formula:
+
+Revenue associated with At-Risk Customers
+
+Source:
+
+* Customer Health Model
+
+---
+
+# 10.8 Executive Intelligence KPIs
+
+| KPI ID  | KPI Name                     | Business Owner |
+| ------- | ---------------------------- | -------------- |
+| KPI-029 | Executive Revenue Scorecard  | CEO            |
+| KPI-030 | Executive Customer Scorecard | CEO            |
+| KPI-031 | Product Penetration Rate     | CEO            |
+
+---
+
+## KPI-029 Executive Revenue Scorecard
+
+Includes:
+
+* ARR
+* MRR
+* Revenue Growth %
+* Revenue by Product
+* Revenue by Geography
+
+---
+
+## KPI-030 Executive Customer Scorecard
+
+Includes:
+
+* Active Customers
+* Customer Churn Rate
+* Healthy Customers
+* At-Risk Customers
+
+---
+
+## KPI-031 Product Penetration Rate
+
+Formula:
+
+Customers Using Product / Eligible Customers × 100
+
+---
+
+# Section Status
+
+Section 10: Semantic Layer & KPI Definitions
+
+Status: APPROVED AND FROZEN
+
+Version: 1.0
+
+
+---
+
+# Section 11: Data Contracts
+
+## Purpose
+
+This section defines the contractual agreement between source system owners and the InsightFlow Data Platform. Data contracts establish ownership, source-of-truth systems, refresh expectations, mandatory fields, data standards, and quality expectations to ensure consistent and reliable data ingestion.
+
+---
+
+# 11.1 Data Contract Principles
+
+## Principle 1: Source Ownership
+
+Every entity must have a clearly defined business owner responsible for data quality and schema changes.
+
+---
+
+## Principle 2: Source of Truth
+
+Every entity shall have a single approved source system.
+
+Example:
+
+```text
+Customer          → CRM
+Subscription      → Subscription Platform
+Invoice           → Billing Platform
+Payment           → Payment Gateway
+Product           → MDM
+Pricing Plan      → MDM
+```
+
+---
+
+## Principle 3: Backward Compatibility
+
+Schema changes must be communicated before implementation.
+
+Examples:
+
+```text
+New Columns            → Allowed
+
+Column Removal         → Approval Required
+
+Datatype Changes       → Approval Required
+
+Business Key Changes   → Not Allowed
+```
+
+---
+
+## Principle 4: Mandatory Business Keys
+
+Business keys must:
+
+```text
+Be Present
+
+Be Unique
+
+Be Stable
+
+Never Be Reused
+```
+
+---
+
+## Principle 5: Data Validation
+
+All inbound data shall be validated against:
+
+```text
+Datatype Rules
+
+Nullability Rules
+
+Allowed Values
+
+Referential Integrity Rules
+```
+
+before publication into Silver.
+
+---
+
+# 11.2 Enterprise Data Standards
+
+## Business Key Standard
+
+Datatype:
+
+```text
+STRING
+```
+
+Rules:
+
+```text
+Not Null
+
+Unique
+
+Immutable
+```
+
+Examples:
+
+```text
+customer_id
+
+subscription_id
+
+invoice_id
+
+payment_id
+
+product_id
+
+plan_id
+```
+
+---
+
+## Date Standard
+
+Datatype:
+
+```text
+DATE
+```
+
+Format:
+
+```text
+YYYY-MM-DD
+```
+
+Example:
+
+```text
+2026-06-12
+```
+
+Applicable Fields:
+
+```text
+invoice_date
+
+subscription_start_date
+
+subscription_end_date
+```
+
+---
+
+## Timestamp Standard
+
+Datatype:
+
+```text
+TIMESTAMP
+```
+
+Timezone:
+
+```text
+UTC
+```
+
+Format:
+
+```text
+ISO-8601
+```
+
+Example:
+
+```text
+2026-06-12T14:30:25Z
+```
+
+Applicable Fields:
+
+```text
+event_timestamp
+
+created_timestamp
+
+updated_timestamp
+
+payment_processed_timestamp
+```
+
+---
+
+## Currency Standard
+
+Datatype:
+
+```text
+NUMERIC
+```
+
+Rules:
+
+```text
+No FLOAT Usage
+
+Precision Preserved
+```
+
+Applicable Fields:
+
+```text
+invoice_amount
+
+payment_amount
+
+subscription_amount
+
+arr
+
+mrr
+```
+
+---
+
+## Boolean Standard
+
+Allowed Values:
+
+```text
+TRUE
+
+FALSE
+```
+
+Not Allowed:
+
+```text
+Y/N
+
+1/0
+
+Yes/No
+```
+
+---
+
+## Status Standard
+
+Status fields must contain approved enumerated values.
+
+Example:
+
+```text
+subscription_status
+
+ACTIVE
+CANCELLED
+EXPIRED
+GRACE_PERIOD
+```
+
+---
+
+# 11.3 Customer Data Contract
+
+| Attribute       | Value           |
+| --------------- | --------------- |
+| Entity          | Customer        |
+| Business Owner  | CRM Team        |
+| Source of Truth | CRM Platform    |
+| Business Key    | customer_id     |
+| Refresh Pattern | CDC / Streaming |
+| SLA             | < 15 Minutes    |
+
+## Mandatory Fields
+
+| Field             | Type      | Nullable | Rule            |
+| ----------------- | --------- | -------- | --------------- |
+| customer_id       | STRING    | No       | Unique          |
+| customer_name     | STRING    | No       | Not Blank       |
+| customer_status   | STRING    | No       | Approved Values |
+| created_timestamp | TIMESTAMP | No       | UTC             |
+| updated_timestamp | TIMESTAMP | No       | UTC             |
+
+---
+
+# 11.4 Subscription Data Contract
+
+| Attribute       | Value                 |
+| --------------- | --------------------- |
+| Entity          | Subscription          |
+| Business Owner  | Revenue Operations    |
+| Source of Truth | Subscription Platform |
+| Business Key    | subscription_id       |
+| Refresh Pattern | CDC / Streaming       |
+| SLA             | < 15 Minutes          |
+
+## Mandatory Fields
+
+| Field               | Type   | Nullable | Rule               |
+| ------------------- | ------ | -------- | ------------------ |
+| subscription_id     | STRING | No       | Unique             |
+| customer_id         | STRING | No       | Valid Customer     |
+| plan_id             | STRING | No       | Valid Pricing Plan |
+| subscription_status | STRING | No       | Approved Values    |
+| start_date          | DATE   | No       | YYYY-MM-DD         |
+| end_date            | DATE   | Yes      | YYYY-MM-DD         |
+
+---
+
+# 11.5 Invoice Data Contract
+
+| Attribute       | Value            |
+| --------------- | ---------------- |
+| Entity          | Invoice          |
+| Business Owner  | Finance          |
+| Source of Truth | Billing Platform |
+| Business Key    | invoice_id       |
+| Refresh Pattern | Daily Batch      |
+| SLA             | 24 Hours         |
+
+## Mandatory Fields
+
+| Field           | Type    | Nullable | Rule               |
+| --------------- | ------- | -------- | ------------------ |
+| invoice_id      | STRING  | No       | Unique             |
+| subscription_id | STRING  | No       | Valid Subscription |
+| invoice_date    | DATE    | No       | YYYY-MM-DD         |
+| invoice_amount  | NUMERIC | No       | >= 0               |
+| invoice_status  | STRING  | No       | Approved Values    |
+
+---
+
+# 11.6 Payment Data Contract
+
+| Attribute       | Value           |
+| --------------- | --------------- |
+| Entity          | Payment         |
+| Business Owner  | Finance         |
+| Source of Truth | Payment Gateway |
+| Business Key    | payment_id      |
+| Refresh Pattern | Daily Batch     |
+| SLA             | 24 Hours        |
+
+## Mandatory Fields
+
+| Field                       | Type      | Nullable | Rule            |
+| --------------------------- | --------- | -------- | --------------- |
+| payment_id                  | STRING    | No       | Unique          |
+| invoice_id                  | STRING    | No       | Valid Invoice   |
+| payment_amount              | NUMERIC   | No       | >= 0            |
+| payment_status              | STRING    | No       | Approved Values |
+| payment_processed_timestamp | TIMESTAMP | No       | UTC             |
+
+---
+
+# 11.7 Usage Event Data Contract
+
+| Attribute       | Value                |
+| --------------- | -------------------- |
+| Entity          | Usage Event          |
+| Business Owner  | Product Team         |
+| Source of Truth | Application Platform |
+| Business Key    | event_id             |
+| Refresh Pattern | Streaming            |
+| SLA             | < 5 Minutes          |
+
+## Mandatory Fields
+
+| Field           | Type      | Nullable | Rule           |
+| --------------- | --------- | -------- | -------------- |
+| event_id        | STRING    | No       | Unique         |
+| user_id         | STRING    | No       | Valid User     |
+| customer_id     | STRING    | No       | Valid Customer |
+| feature_id      | STRING    | No       | Valid Feature  |
+| event_timestamp | TIMESTAMP | No       | UTC            |
+
+---
+
+# 11.8 Product Data Contract
+
+| Attribute       | Value        |
+| --------------- | ------------ |
+| Entity          | Product      |
+| Business Owner  | Product Team |
+| Source of Truth | MDM          |
+| Business Key    | product_id   |
+| Refresh Pattern | Daily Batch  |
+| SLA             | 24 Hours     |
+
+## Mandatory Fields
+
+| Field            | Type   | Nullable | Rule            |
+| ---------------- | ------ | -------- | --------------- |
+| product_id       | STRING | No       | Unique          |
+| product_name     | STRING | No       | Not Blank       |
+| product_category | STRING | No       | Approved Values |
+
+---
+
+# 11.9 Pricing Plan Data Contract
+
+| Attribute       | Value              |
+| --------------- | ------------------ |
+| Entity          | Pricing Plan       |
+| Business Owner  | Revenue Operations |
+| Source of Truth | MDM                |
+| Business Key    | plan_id            |
+| Refresh Pattern | Daily Batch        |
+| SLA             | 24 Hours           |
+
+## Mandatory Fields
+
+| Field             | Type    | Nullable | Rule            |
+| ----------------- | ------- | -------- | --------------- |
+| plan_id           | STRING  | No       | Unique          |
+| plan_name         | STRING  | No       | Not Blank       |
+| billing_frequency | STRING  | No       | Approved Values |
+| base_price        | NUMERIC | No       | >= 0            |
+
+---
+
+# 11.10 Contract Enforcement Framework
+
+## Validation Layer
+
+All inbound data shall be validated in Bronze/Silver ingestion pipelines.
+
+Validation Categories:
+
+```text
+Schema Validation
+
+Datatype Validation
+
+Mandatory Field Validation
+
+Referential Integrity Validation
+
+Business Rule Validation
+```
+
+---
+
+## Contract Violations
+
+Contract violations shall not stop ingestion into Bronze.
+
+Violations shall:
+
+```text
+Be Logged
+
+Be Monitored
+
+Be Reported Through Data Quality Framework
+```
+
+---
+
+## Escalation
+
+Repeated violations shall be escalated to the respective source system owner.
+
+---
+
+# Section Status
+
+Section 11: Data Contracts
+
+Status: APPROVED AND FROZEN
+
+Version: 1.0
+
+
+---
 
 ## Analytics Artifacts:
 
