@@ -2075,7 +2075,7 @@ Subscription
 
 
 Invoice
-Payment
+Paymentf
 
 
 ---
@@ -2493,6 +2493,2908 @@ Status: APPROVED AND FROZEN
 Version: 1.0
 -----
 
+# Section 5: Physical Data Model
+
+## Purpose
+
+This section defines the physical implementation standards for InsightFlow, including dataset organization, naming conventions, datatype standards, key management, SCD strategy, storage architecture, partitioning, clustering, incremental processing, and metadata management.
+
+---
+
+# 5.1 Physical Architecture Principles
+
+## Principle 1: Business-Driven Design
+
+The physical model shall implement the approved:
+
+* Conceptual Model
+* Logical Model
+* Dimensional Model
+
+Technology decisions must support business requirements.
+
+---
+
+## Principle 2: Single Source of Truth
+
+The Silver layer shall serve as the canonical business layer.
+
+All dimensions and facts shall be maintained in Silver.
+
+---
+
+## Principle 3: Gold for Consumption
+
+Gold shall contain:
+
+* KPI Tables
+* Aggregate Tables
+* Forecast Outputs
+* AI Feature Tables
+* Executive Scorecards
+
+Gold shall not contain raw transactional data.
+
+---
+
+## Principle 4: Auditability
+
+All data entering the platform shall be traceable back to its original source.
+
+Raw source data shall be archived in GCS.
+
+---
+
+## Principle 5: Cloud-Native Design
+
+The platform shall be optimized for:
+
+* Kafka
+* GCS
+* BigQuery
+* Airflow (Cloud Composer)
+* Dataproc (optional)
+
+---
+
+# 5.2 Physical Storage Architecture
+
+## Data Flow
+
+
+Source Systems
+      ↓
+Kafka
+      ↓
+GCS Landing (Raw Archive)
+      ↓
+BigQuery Bronze
+      ↓
+BigQuery Silver
+      ↓
+BigQuery Gold
+
+
+---
+
+## Landing Layer
+
+Technology:
+
+
+Google Cloud Storage (GCS)
+
+
+Purpose:
+
+* Raw data archive
+* Replay capability
+* Audit support
+* Backfill support
+
+Examples:
+
+
+gs://insightflow/customer/
+gs://insightflow/subscription/
+gs://insightflow/payment/
+
+
+---
+
+## Bronze Layer
+
+Technology:
+
+
+BigQuery Dataset
+
+
+Purpose:
+
+* Raw business records
+* Minimal transformation
+* Historical persistence
+
+Examples:
+
+
+bronze.customer
+bronze.subscription
+bronze.invoice
+bronze.payment
+bronze.usage_event
+
+
+---
+
+## Silver Layer
+
+Technology:
+
+
+BigQuery Dataset
+
+
+Purpose:
+
+* Canonical business layer
+* Dimensions
+* Facts
+* SCD implementation
+
+Examples:
+
+
+silver.dim_customer
+silver.dim_subscription
+silver.dim_product
+silver.dim_pricing_plan
+
+silver.fact_subscription_event
+silver.fact_invoice
+silver.fact_payment
+silver.fact_usage_event
+
+
+---
+
+## Gold Layer
+
+Technology:
+
+
+BigQuery Dataset
+
+
+Purpose:
+
+* KPIs
+* Aggregates
+* Forecasting
+* AI outputs
+
+Examples:
+
+
+gold.agg_daily_arr
+gold.customer_health_score
+gold.forecast_revenue
+
+
+---
+
+## Metadata Layer
+
+Technology:
+
+
+BigQuery Dataset
+
+
+Purpose:
+
+* Audit
+* Monitoring
+* Data Quality
+* Watermark Management
+
+Examples:
+
+
+metadata.pipeline_run
+metadata.pipeline_watermark
+metadata.data_quality_results
+metadata.reconciliation_summary
+
+
+---
+
+# 5.3 Naming Standards
+
+## Dataset Naming
+
+
+landing
+bronze
+silver
+gold
+metadata
+
+
+---
+
+## Dimension Naming
+
+Pattern:
+
+
+dim_<entity>
+
+
+Examples:
+
+
+dim_customer
+dim_subscription
+dim_product
+dim_pricing_plan
+
+
+---
+
+## Fact Naming
+
+Pattern:
+
+
+fact_<business_event>
+
+
+Examples:
+
+
+fact_subscription_event
+fact_invoice
+fact_payment
+fact_usage_event
+
+
+---
+
+## Aggregate Naming
+
+Pattern:
+
+
+agg_<metric>
+
+
+Examples:
+
+
+agg_daily_arr
+agg_monthly_revenue
+
+
+---
+
+## Forecast Naming
+
+Pattern:
+
+
+forecast_<metric>
+
+
+Examples:
+
+
+forecast_revenue
+forecast_arr
+
+
+---
+
+## Feature Naming
+
+Pattern:
+
+
+feature_<business_feature>
+
+
+Examples:
+
+
+feature_customer_health
+feature_churn_prediction
+
+
+---
+
+## Column Naming
+
+All columns shall follow:
+
+
+snake_case
+
+
+Examples:
+
+
+customer_id
+subscription_id
+invoice_amount
+event_timestamp
+
+
+---
+
+# 5.4 Data Type Standards
+
+| Category       | Datatype  |
+| -------------- | --------- |
+| Business Keys  | STRING    |
+| Surrogate Keys | INT64     |
+| Currency       | NUMERIC   |
+| Counts         | INT64     |
+| Date           | DATE      |
+| Timestamp      | TIMESTAMP |
+| Boolean        | BOOLEAN   |
+| Status         | STRING    |
+| JSON Payload   | JSON      |
+
+---
+
+## Timestamp Standard
+
+All timestamps shall be:
+
+
+UTC
+ISO-8601
+
+
+Example:
+
+
+2026-06-12T14:30:25Z
+
+
+---
+
+# 5.5 Surrogate Key Strategy
+
+## Standard
+
+Business Key:
+
+
+STRING
+
+
+Surrogate Key:
+
+
+INT64
+
+
+---
+
+## Fact Tables
+
+Fact tables shall retain:
+
+
+Business Key
++
+Surrogate Key
+
+
+Examples:
+
+
+customer_key
+customer_id
+
+subscription_key
+subscription_id
+
+
+Purpose:
+
+* Lineage
+* Debugging
+* Reconciliation
+* Historical tracking
+
+---
+
+## Unknown Member
+
+Reserved Key:
+
+
+-1
+
+
+Purpose:
+
+* Missing dimensions
+* Late arriving dimensions
+* Reconciliation support
+
+---
+
+# 5.6 Slowly Changing Dimension Strategy
+
+## SCD2 Dimensions
+
+
+dim_customer
+
+dim_subscription
+
+dim_pricing_plan
+
+dim_user
+
+
+---
+
+## SCD1 Dimensions
+
+
+dim_product
+
+dim_feature
+
+dim_country
+
+dim_region
+
+dim_customer_segment
+
+dim_acquisition_channel
+
+
+---
+
+## Standard SCD2 Columns
+
+
+effective_from_date
+
+effective_to_date
+
+is_current
+
+
+---
+
+## Open End Date
+
+Current records:
+
+
+effective_to_date = '9999-12-31'
+
+
+---
+
+## Fact Resolution
+
+Facts shall resolve dimensions using:
+
+
+business_key
++
+event_date
+
+
+to identify the correct SCD version.
+
+---
+
+# 5.7 Partitioning Standards
+
+## fact_usage_event
+
+Partition:
+
+
+event_timestamp
+
+
+Granularity:
+
+
+DAY
+
+
+---
+
+## fact_subscription_event
+
+Partition:
+
+
+event_timestamp
+
+
+Granularity:
+
+
+DAY
+
+
+---
+
+## fact_payment
+
+Partition:
+
+
+payment_processed_timestamp
+
+
+Granularity:
+
+
+DAY
+
+
+---
+
+## fact_invoice
+
+Partition:
+
+
+invoice_date
+
+
+Granularity:
+
+
+MONTH
+
+
+---
+
+## Dimensions
+
+No partitioning initially.
+
+---
+
+# 5.8 Clustering Standards
+
+## fact_usage_event
+
+Cluster By:
+
+
+customer_key
+user_key
+feature_key
+
+
+---
+
+## fact_subscription_event
+
+Cluster By:
+
+
+customer_key
+subscription_key
+
+
+---
+
+## fact_payment
+
+Cluster By:
+
+
+customer_key
+subscription_key
+
+
+---
+
+## fact_invoice
+
+Cluster By:
+
+
+customer_key
+subscription_key
+
+
+---
+
+# 5.9 Incremental Processing Strategy
+
+## Tier 1
+
+Preferred:
+
+
+CDC
+
+
+Examples:
+
+
+Customer
+
+Subscription
+
+
+---
+
+## Tier 2
+
+Timestamp-Based Incremental
+
+Pattern:
+
+sql
+WHERE updated_timestamp > watermark
+
+
+---
+
+## Tier 3
+
+Snapshot Comparison
+
+Used when CDC and timestamps are unavailable.
+
+---
+
+## Watermark Management
+
+Control Table:
+
+
+metadata.pipeline_watermark
+
+
+Attributes:
+
+
+pipeline_name
+last_successful_timestamp
+
+
+---
+
+## Reprocessing Support
+
+All pipelines shall support:
+
+
+start_date
+end_date
+
+
+for backfills and reprocessing.
+
+---
+
+# 5.10 Metadata & Audit Framework
+
+## Pipeline Execution
+
+Table:
+
+
+metadata.pipeline_run
+
+
+Attributes:
+
+
+run_id
+pipeline_name
+start_timestamp
+end_timestamp
+status
+records_processed
+records_failed
+error_message
+
+
+---
+
+## Watermark Tracking
+
+Table:
+
+
+metadata.pipeline_watermark
+
+
+---
+
+## Data Quality Monitoring
+
+Table:
+
+
+metadata.data_quality_results
+
+
+---
+
+## Reconciliation Tracking
+
+Table:
+
+
+metadata.reconciliation_summary
+
+
+---
+
+## Standard Audit Columns
+
+### Dimensions
+
+
+created_timestamp
+
+updated_timestamp
+
+source_system
+
+
+---
+
+### Facts
+
+
+event_timestamp
+
+created_timestamp
+
+source_system
+
+
+---
+
+## Error Handling
+
+Missing dimensions shall not fail pipelines.
+
+Fallback:
+
+
+surrogate_key = -1
+
+
+Issue shall be logged and reconciled later.
+
+---
+
+# Section Status
+
+Section 5: Physical Data Model
+
+Status: APPROVED AND FROZEN
+
+Version: 1.0
+
+
+
+----
+
+# Section 6: Data Quality Framework
+
+## Purpose
+
+This section defines the Data Quality (DQ) standards, validation framework, monitoring processes, alerting mechanisms, and remediation strategy for InsightFlow.
+
+The objective is to ensure reliable, trustworthy, and business-consumable data while minimizing operational disruptions.
+
+---
+
+# 6.1 Data Quality Principles
+
+## Principle 1: Data Availability Over Perfection
+
+The platform shall prioritize data availability whenever possible.
+
+Preferred:
+
+
+95% accurate dashboard with alerts
+
+
+over
+
+
+No dashboard because a few records failed validation
+
+
+---
+
+## Principle 2: Tiered Error Handling
+
+Errors shall be classified into severity levels.
+
+### Critical Errors
+
+Pipeline execution stops.
+
+Examples:
+
+
+Source unavailable
+
+Schema corruption
+
+Unreadable files
+
+Missing mandatory source tables
+
+Infrastructure failures
+
+
+---
+
+### Non-Critical Errors
+
+Pipeline continues.
+
+Examples:
+
+
+Missing dimension records
+
+Invalid optional fields
+
+Unknown country codes
+
+Late arriving dimensions
+
+Minor data inconsistencies
+
+
+Records are loaded using approved fallback rules.
+
+---
+
+## Principle 3: Shift Left Validation
+
+Data quality checks shall be performed as early as possible.
+
+
+Landing
+    ↓
+Bronze Validation
+    ↓
+Silver Validation
+    ↓
+Gold Validation
+
+
+---
+
+## Principle 4: Every DQ Failure Must Be Visible
+
+No data quality issue shall fail silently.
+
+Every violation must:
+
+
+Be Logged
+
+Be Monitored
+
+Be Alerted
+
+Be Traceable
+
+
+---
+
+# 6.2 Data Quality Dimensions
+
+The platform shall monitor six core DQ dimensions.
+
+---
+
+## Completeness
+
+Validates presence of required fields.
+
+Examples:
+
+
+customer_id NOT NULL
+
+subscription_id NOT NULL
+
+invoice_amount NOT NULL
+
+
+---
+
+## Uniqueness
+
+Validates duplicate records.
+
+Examples:
+
+
+customer_id unique
+
+subscription_id unique
+
+invoice_id unique
+
+
+---
+
+## Validity
+
+Validates datatype and format.
+
+Examples:
+
+
+Date format
+
+Timestamp format
+
+Currency datatype
+
+Enum values
+
+
+---
+
+## Consistency
+
+Validates business consistency.
+
+Examples:
+
+
+Subscription customer must exist
+
+Invoice subscription must exist
+
+Payment invoice must exist
+
+
+---
+
+## Timeliness
+
+Validates freshness.
+
+Examples:
+
+
+Customer updates received within SLA
+
+Usage events arriving within SLA
+
+
+---
+
+## Referential Integrity
+
+Validates entity relationships.
+
+Examples:
+
+
+Customer exists
+
+Product exists
+
+Pricing Plan exists
+
+
+---
+
+# 6.3 Standard Validation Rules
+
+## Customer
+
+Checks:
+
+
+customer_id NOT NULL
+
+customer_id UNIQUE
+
+customer_status IN Approved Values
+
+created_timestamp VALID UTC
+
+
+---
+
+## Subscription
+
+Checks:
+
+
+subscription_id NOT NULL
+
+customer_id EXISTS
+
+plan_id EXISTS
+
+start_date <= end_date
+
+
+---
+
+## Invoice
+
+Checks:
+
+
+invoice_id NOT NULL
+
+invoice_amount >= 0
+
+subscription_id EXISTS
+
+
+---
+
+## Payment
+
+Checks:
+
+
+payment_id NOT NULL
+
+payment_amount >= 0
+
+invoice_id EXISTS
+
+
+---
+
+## Usage Events
+
+Checks:
+
+
+event_id NOT NULL
+
+event_timestamp VALID
+
+customer_id EXISTS
+
+feature_id EXISTS
+
+
+---
+
+# 6.4 Data Quality Severity Framework
+
+## Severity 1 (Critical)
+
+Action:
+
+
+Pipeline Fails
+Immediate Alert
+
+
+Examples:
+
+
+Source Missing
+
+Schema Corruption
+
+File Corruption
+
+Critical Datatype Failure
+
+
+---
+
+## Severity 2 (High)
+
+Action:
+
+
+Pipeline Continues
+
+Alert Generated
+
+Manual Review Required
+
+
+Examples:
+
+
+> 5% Missing Customer Keys
+
+Large Duplicate Spike
+
+Reference Data Missing
+
+
+---
+
+## Severity 3 (Medium)
+
+Action:
+
+
+Pipeline Continues
+
+Issue Logged
+
+Daily Review
+
+
+Examples:
+
+
+Unknown Dimensions
+
+Small Duplicate Counts
+
+Minor Data Delays
+
+
+---
+
+## Severity 4 (Low)
+
+Action:
+
+
+Logged Only
+
+
+Examples:
+
+
+Optional Field Missing
+
+Minor Formatting Issues
+
+
+---
+
+# 6.5 Unknown Member Strategy
+
+Approved Unknown Key:
+
+
+-1
+
+
+Used For:
+
+
+Late Arriving Dimensions
+
+Missing Reference Data
+
+Data Quality Exceptions
+
+
+---
+
+## Example
+
+Customer Missing:
+
+
+customer_key = -1
+
+
+Fact record still loads.
+
+---
+
+## Reconciliation
+
+Scheduled jobs shall attempt correction when missing dimensions become available.
+
+---
+
+# 6.6 Data Quality Scorecard
+
+Every table shall have a DQ score.
+
+Formula:
+
+
+DQ Score =
+(Passed Checks / Total Checks)
+× 100
+
+
+---
+
+## Thresholds
+
+| Score   | Status   |
+| ------- | -------- |
+| >= 95%  | Healthy  |
+| 90%-95% | Warning  |
+| < 90%   | Critical |
+
+---
+
+# 6.7 Metadata & Audit Integration
+
+Data quality results shall be stored in:
+
+
+metadata.data_quality_results
+
+
+---
+
+Mandatory Attributes:
+
+
+run_id
+
+table_name
+
+check_name
+
+check_status
+
+failed_record_count
+
+execution_timestamp
+
+severity
+
+
+---
+
+# 6.8 Alerting Framework
+
+## Purpose
+
+Automatically notify stakeholders when data quality issues or pipeline failures occur.
+
+---
+
+## Alert Channels
+
+Primary:
+
+
+Microsoft Teams
+
+Email
+
+
+Optional:
+
+
+Slack
+
+PagerDuty
+
+ServiceNow
+
+
+---
+
+## Alert Categories
+
+### Pipeline Failure Alert
+
+Triggered When:
+
+
+Pipeline Status = FAILED
+
+
+Recipients:
+
+
+Data Engineering Team
+
+
+Alert Example:
+
+
+Pipeline: subscription_load
+
+Status: FAILED
+
+Time: 2026-06-13 09:30 UTC
+
+Error:
+Source Table Not Reachable
+
+
+---
+
+### High Severity DQ Alert
+
+Triggered When:
+
+
+DQ Score < 90%
+
+OR
+
+Critical Validation Failure
+
+
+Recipients:
+
+
+Data Engineering
+
+Business Owner
+
+
+Alert Example:
+
+
+Table: dim_customer
+
+Issue:
+12% Missing customer_id
+
+Severity: HIGH
+
+
+---
+
+### Freshness Alert
+
+Triggered When:
+
+
+SLA Breach
+
+
+Examples:
+
+
+Usage Events Delayed > 15 Minutes
+
+Customer Feed Delayed > 1 Hour
+
+Invoice Feed Delayed > 24 Hours
+
+
+---
+
+### Unknown Dimension Alert
+
+Triggered When:
+
+
+Unknown Key %
+exceeds threshold
+
+
+Examples:
+
+
+customer_key = -1
+
+product_key = -1
+
+plan_key = -1
+
+
+Threshold:
+
+
+> 1%
+
+
+---
+
+# 6.9 Data Quality Dashboards
+
+The platform shall provide operational dashboards displaying:
+
+
+Pipeline Success Rate
+
+DQ Scores
+
+Failed Checks
+
+Unknown Dimension %
+
+Data Freshness
+
+SLA Compliance
+
+Error Trends
+
+
+---
+
+# 6.10 Remediation Framework
+
+## Automatic Remediation
+
+Examples:
+
+
+Retry Failed Pipelines
+
+Reprocess Late Files
+
+Dimension Reconciliation Jobs
+
+
+---
+
+## Manual Remediation
+
+Examples:
+
+
+Fix Source Data
+
+Backfill Missing Data
+
+Correct Reference Data
+
+
+---
+
+## Ownership
+
+Every DQ issue shall have:
+
+
+Assigned Owner
+
+Created Timestamp
+
+Resolution Timestamp
+
+Current Status
+
+
+---
+
+# Section Status
+
+Section 6: Data Quality Framework
+
+Status: APPROVED AND FROZEN
+
+Version: 1.0
+---
+# Section 7: Security & Governance
+
+## Purpose
+
+This section defines the security, access control, governance, auditability, and compliance framework for InsightFlow.
+
+The objective is to ensure that data remains secure, compliant, discoverable, and accessible only to authorized users while maintaining operational efficiency.
+
+---
+
+# 7.1 Security Principles
+
+## Principle 1: Least Privilege Access
+
+Users shall be granted only the minimum access required to perform their responsibilities.
+
+---
+
+## Principle 2: Role-Based Access Control (RBAC)
+
+Access shall be assigned through roles rather than individual permissions.
+
+Benefits:
+
+
+Simplified Administration
+
+Consistent Security
+
+Scalable Governance
+
+
+---
+
+## Principle 3: Data Ownership
+
+Every entity, dataset, and KPI shall have a designated business owner.
+
+---
+
+## Principle 4: Auditability
+
+All access, modifications, and operational activities shall be auditable.
+
+---
+
+## Principle 5: Separation of Environments
+
+Development, testing, and production environments shall remain logically isolated.
+
+---
+
+# 7.2 Environment Strategy
+
+## Environments
+
+
+DEV
+
+UAT
+
+PROD
+
+
+---
+
+## DEV
+
+Purpose:
+
+
+Development
+
+Unit Testing
+
+Feature Validation
+
+
+Characteristics:
+
+
+Synthetic Data Preferred
+
+Limited Access Controls
+
+Frequent Changes
+
+
+---
+
+## UAT
+
+Purpose:
+
+
+Business Testing
+
+Integration Testing
+
+Release Validation
+
+
+Characteristics:
+
+
+Production-like Environment
+
+Controlled Access
+
+Pre-Production Validation
+
+
+---
+
+## PROD
+
+Purpose:
+
+
+Business Reporting
+
+Operational Analytics
+
+Executive Dashboards
+
+AI Applications
+
+
+Characteristics:
+
+
+Strict Access Controls
+
+Full Auditability
+
+High Availability
+
+
+---
+
+# 7.3 Role-Based Access Control (RBAC)
+
+## Data Engineer
+
+Permissions:
+
+
+Read/Write Bronze
+
+Read/Write Silver
+
+Read Metadata
+
+Manage Pipelines
+
+
+---
+
+## Analytics Engineer
+
+Permissions:
+
+
+Read Silver
+
+Read/Write Gold
+
+Read Metadata
+
+
+---
+
+## Business Analyst
+
+Permissions:
+
+
+Read Gold
+
+Read Approved KPI Tables
+
+
+---
+
+## Product Team
+
+Permissions:
+
+
+Read Product KPIs
+
+Read Usage Metrics
+
+Read Customer Health Metrics
+
+
+---
+
+## Executive User
+
+Permissions:
+
+
+Read Executive Dashboards
+
+Read Scorecards
+
+Read Approved KPI Views
+
+
+---
+
+## Platform Administrator
+
+Permissions:
+
+
+Full Platform Access
+
+
+---
+
+# 7.4 Dataset Security Model
+
+## Bronze Layer
+
+Access:
+
+
+Data Engineering Only
+
+
+Reason:
+
+
+Contains Raw Operational Data
+
+
+---
+
+## Silver Layer
+
+Access:
+
+
+Data Engineering
+
+Analytics Engineering
+
+
+Reason:
+
+
+Canonical Business Layer
+
+
+---
+
+## Gold Layer
+
+Access:
+
+
+Business Users
+
+Product Teams
+
+Executives
+
+Analytics Teams
+
+
+Reason:
+
+
+Business Consumption Layer
+
+
+---
+
+## Metadata Layer
+
+Access:
+
+
+Platform Team
+
+Data Engineering
+
+
+---
+
+# 7.5 Service Account Strategy
+
+## Principle
+
+Applications shall not use personal user accounts.
+
+---
+
+## Service Accounts
+
+Examples:
+
+
+sa-airflow
+
+sa-kafka-consumer
+
+sa-data-quality
+
+sa-forecasting
+
+
+---
+
+## Benefits
+
+
+Traceability
+
+Automation
+
+Credential Isolation
+
+
+---
+
+# 7.6 Data Encryption
+
+## Data In Transit
+
+Encryption:
+
+
+TLS
+
+
+Applicable To:
+
+
+Kafka
+
+Airflow
+
+BigQuery
+
+APIs
+
+GCS
+
+
+---
+
+## Data At Rest
+
+Encryption:
+
+
+Google Managed Encryption Keys
+
+
+Supported Future Option:
+
+
+Customer Managed Encryption Keys (CMEK)
+
+
+---
+
+# 7.7 Sensitive Data Management
+
+## Sensitive Data Examples
+
+
+Email Address
+
+Phone Number
+
+Physical Address
+
+Payment Information
+
+
+---
+
+## Principle
+
+Sensitive data shall only be exposed to authorized users.
+
+---
+
+## Masking Strategy
+
+Examples:
+
+
+john.doe@email.com
+
+↓
+
+j***@email.com
+
+
+
+9876543210
+
+↓
+
+98******10
+
+
+---
+
+## Access Control
+
+Sensitive attributes shall be protected using:
+
+
+Column-Level Security
+
+
+where required.
+
+---
+
+# 7.8 Audit Logging
+
+## Objective
+
+Provide traceability across the platform.
+
+---
+
+## Audit Categories
+
+### Data Access
+
+Tracks:
+
+
+Who Accessed Data
+
+When
+
+What Dataset
+
+
+---
+
+### Pipeline Activity
+
+Tracks:
+
+
+Pipeline Execution
+
+Failures
+
+Retries
+
+Backfills
+
+
+---
+
+### Administrative Activity
+
+Tracks:
+
+
+Role Changes
+
+Permission Changes
+
+Configuration Updates
+
+
+---
+
+## Audit Retention
+
+Minimum Retention:
+
+
+1 Year
+
+
+---
+
+# 7.9 Data Lineage
+
+## Objective
+
+Track movement of data from source to consumption.
+
+---
+
+## Lineage Scope
+
+
+Source System
+
+Kafka Topic
+
+GCS Landing
+
+Bronze Table
+
+Silver Table
+
+Gold Table
+
+Dashboard / KPI
+
+
+---
+
+## Benefits
+
+
+Impact Analysis
+
+Root Cause Analysis
+
+Regulatory Compliance
+
+
+---
+
+# 7.10 Governance Framework
+
+## Data Ownership
+
+Every entity shall have:
+
+
+Business Owner
+
+Technical Owner
+
+
+---
+
+## KPI Ownership
+
+Every KPI shall have:
+
+
+Business Owner
+
+Approved Definition
+
+Approved Formula
+
+
+---
+
+## Change Management
+
+Changes requiring approval:
+
+
+Business Key Changes
+
+Schema Changes
+
+KPI Formula Changes
+
+Source System Changes
+
+
+---
+
+# 7.11 Compliance & Retention
+
+## Data Retention
+
+### GCS Raw Archive
+
+Retention:
+
+
+7 Years
+
+
+---
+
+### Bronze
+
+Retention:
+
+
+7 Years
+
+
+---
+
+### Silver
+
+Retention:
+
+
+Indefinite
+
+
+---
+
+### Gold
+
+Retention:
+
+
+Rebuildable
+
+
+---
+
+### Metadata
+
+Retention:
+
+
+3 Years
+
+
+---
+
+# 7.12 Security Monitoring
+
+Security events shall be monitored for:
+
+
+Unauthorized Access Attempts
+
+Permission Violations
+
+Failed Authentication
+
+Excessive Data Access
+
+Suspicious Activity
+
+
+---
+
+## Alerting
+
+Security alerts shall be routed through:
+
+
+Email
+
+Microsoft Teams
+
+
+using the centralized alerting framework.
+
+---
+
+# Section Status
+
+Section 7: Security & Governance
+
+Status: APPROVED AND FROZEN
+
+Version: 1.0
+
+
+---
+
+# Section 9: Orchestration & Pipeline Design
+
+## Purpose
+
+This section defines the orchestration framework, pipeline architecture, ingestion patterns, processing standards, monitoring framework, retry mechanisms, and backfill strategy for InsightFlow.
+
+The objective is to ensure reliable, scalable, observable, and recoverable data pipelines across the platform.
+
+---
+
+# 9.1 Pipeline Design Principles
+
+## Principle 1: Metadata-Driven Processing
+
+Pipeline execution shall be controlled through metadata tables wherever possible.
+
+Examples:
+
+
+metadata.pipeline_run
+
+metadata.pipeline_watermark
+
+metadata.data_quality_results
+
+metadata.alert_log
+
+
+---
+
+## Principle 2: Idempotent Processing
+
+Pipelines must support multiple executions without generating duplicate records.
+
+Examples:
+
+
+MERGE Operations
+
+CDC Processing
+
+Watermark-Based Loads
+
+
+---
+
+## Principle 3: Restartable Pipelines
+
+Pipeline failures shall allow restart from the last successful checkpoint.
+
+---
+
+## Principle 4: Observable Pipelines
+
+Every pipeline execution shall generate operational metadata for:
+
+
+Execution Tracking
+
+Monitoring
+
+Alerting
+
+Audit
+
+
+---
+
+## Principle 5: Reusable Framework
+
+Pipeline logic shall be reusable across entities and business domains.
+
+---
+
+# 9.2 Ingestion Architecture
+
+## Streaming Ingestion
+
+Primary ingestion mechanism:
+
+
+Kafka
+
+
+Architecture:
+
+
+Source Systems
+      ↓
+Kafka
+      ↓
+GCS Landing (Raw Archive)
+      ↓
+BigQuery Bronze
+
+
+---
+
+## Batch Ingestion
+
+Supported for:
+
+
+Files
+
+APIs
+
+External Partner Data
+
+Reference Data
+
+
+Architecture:
+
+
+Source
+      ↓
+GCS Landing
+      ↓
+BigQuery Bronze
+
+
+---
+
+## Landing Layer
+
+Technology:
+
+
+Google Cloud Storage (GCS)
+
+
+Purpose:
+
+
+Raw Data Archive
+
+Replay Support
+
+Audit Support
+
+Backfill Support
+
+
+---
+
+# 9.3 Airflow Orchestration Architecture
+
+## Orchestration Platform
+
+Technology:
+
+
+Apache Airflow
+
+(Google Cloud Composer)
+
+
+---
+
+## DAG Design Strategy
+
+Approved Model:
+
+
+Hybrid / Entity-Based DAG Architecture
+
+
+---
+
+## Pipeline DAGs
+
+
+customer_pipeline_dag
+
+subscription_pipeline_dag
+
+invoice_pipeline_dag
+
+payment_pipeline_dag
+
+usage_event_pipeline_dag
+
+product_pipeline_dag
+
+pricing_plan_pipeline_dag
+
+
+---
+
+## Consumption Layer DAGs
+
+
+gold_kpi_dag
+
+forecasting_dag
+
+customer_health_dag
+
+
+---
+
+## DAG Structure
+
+Each entity DAG shall follow:
+
+
+Extract
+    ↓
+Landing Validation
+    ↓
+Bronze Load
+    ↓
+DQ Validation
+    ↓
+Silver Load
+    ↓
+Metadata Update
+    ↓
+Alert Generation
+
+
+---
+
+# 9.4 Bronze to Silver Processing
+
+## Objective
+
+Transform raw operational records into canonical business entities.
+
+---
+
+## Processing Method
+
+Preferred:
+
+
+CDC
+
+
+Fallback:
+
+
+Timestamp Incremental
+
+
+---
+
+## Transformations
+
+Examples:
+
+
+Data Cleansing
+
+Datatype Standardization
+
+Business Rule Validation
+
+Surrogate Key Resolution
+
+SCD Processing
+
+
+---
+
+## Output
+
+Dimensions:
+
+
+dim_customer
+
+dim_subscription
+
+dim_product
+
+dim_pricing_plan
+
+
+Facts:
+
+
+fact_subscription_event
+
+fact_invoice
+
+fact_payment
+
+fact_usage_event
+
+
+---
+
+# 9.5 Silver to Gold Processing
+
+## Objective
+
+Generate business-ready analytical outputs.
+
+---
+
+## Outputs
+
+
+KPI Tables
+
+Aggregates
+
+Forecasts
+
+Customer Health Scores
+
+Executive Scorecards
+
+
+---
+
+## Example Gold Tables
+
+
+gold.agg_daily_arr
+
+gold.customer_health_score
+
+gold.forecast_revenue
+
+gold.executive_scorecard
+
+
+---
+
+## Refresh Strategy
+
+KPIs:
+
+
+Hourly
+
+
+Forecasts:
+
+
+Daily
+
+
+Executive Scorecards:
+
+
+Daily
+
+
+---
+
+# 9.6 Retry & Recovery Framework
+
+## Task Retry
+
+Default Retry Count:
+
+
+3
+
+
+---
+
+## Retry Strategy
+
+
+Exponential Backoff
+
+
+---
+
+## Pipeline Recovery
+
+Supported Mechanisms:
+
+
+Task Restart
+
+DAG Restart
+
+Partial Reprocessing
+
+Full Reprocessing
+
+
+---
+
+## Idempotency Requirement
+
+All pipelines must support safe reruns.
+
+Examples:
+
+
+MERGE Operations
+
+CDC Replay
+
+Date Range Reprocessing
+
+
+---
+
+# 9.7 Backfill Framework
+
+## Objective
+
+Support historical reprocessing without affecting active workloads.
+
+---
+
+## Standard Parameters
+
+All pipelines shall support:
+
+
+start_date
+
+end_date
+
+
+---
+
+## Supported Scenarios
+
+
+Historical Loads
+
+Data Corrections
+
+Source Reprocessing
+
+Dimension Rebuilds
+
+Fact Rebuilds
+
+
+---
+
+## Backfill Execution
+
+Example:
+
+
+subscription_pipeline_dag
+
+start_date = 2026-01-01
+
+end_date = 2026-01-31
+
+
+---
+
+## Backfill Audit
+
+All backfills shall be logged in:
+
+
+metadata.pipeline_run
+
+
+---
+
+# 9.8 Watermark Management
+
+## Purpose
+
+Track incremental processing state.
+
+---
+
+## Metadata Table
+
+
+metadata.pipeline_watermark
+
+
+---
+
+## Standard Attributes
+
+
+pipeline_name
+
+entity_name
+
+last_successful_timestamp
+
+updated_timestamp
+
+
+---
+
+## Usage
+
+Example:
+
+sql
+WHERE updated_timestamp >
+last_successful_timestamp
+
+
+---
+
+# 9.9 Monitoring Framework
+
+## Operational Metadata
+
+Pipeline monitoring shall be driven through metadata tables.
+
+---
+
+## Pipeline Execution Monitoring
+
+Table:
+
+
+metadata.pipeline_run
+
+
+Tracks:
+
+
+Start Time
+
+End Time
+
+Status
+
+Records Processed
+
+Records Failed
+
+Execution Duration
+
+
+---
+
+## Data Quality Monitoring
+
+Table:
+
+
+metadata.data_quality_results
+
+
+Tracks:
+
+
+DQ Scores
+
+Failed Checks
+
+Severity
+
+Violation Counts
+
+
+---
+
+## Alert Monitoring
+
+Table:
+
+
+metadata.alert_log
+
+
+Tracks:
+
+
+Alert Type
+
+Severity
+
+Status
+
+Resolution Timestamp
+
+
+---
+
+# 9.10 Alerting Framework
+
+## Alert Sources
+
+Alerts may originate from:
+
+
+Pipeline Failures
+
+Data Quality Failures
+
+Freshness Violations
+
+SLA Breaches
+
+Infrastructure Failures
+
+Schema Validation Failures
+
+
+---
+
+## Alert Architecture
+
+
+Airflow / Validation Framework
+            ↓
+      Alert Service
+            ↓
+Email
+Microsoft Teams
+
+
+---
+
+## Alert Payload
+
+Every alert shall include:
+
+
+Alert ID
+
+Timestamp
+
+Severity
+
+Pipeline Name
+
+Entity Name
+
+Environment
+
+Run ID
+
+Error Type
+
+Error Description
+
+Recommended Resolution
+
+
+---
+
+## Alert Audit
+
+All alerts shall be stored in:
+
+
+metadata.alert_log
+
+
+---
+
+## Future Integrations
+
+The framework shall support future integration with:
+
+
+Slack
+
+PagerDuty
+
+ServiceNow
+
+
+without architectural changes.
+
+---
+
+# 9.11 Operational SLA Framework
+
+## Streaming Pipelines
+
+Target SLA:
+
+
+< 5 Minutes
+
+
+Examples:
+
+
+Usage Events
+
+Customer Events
+
+Subscription Events
+
+
+---
+
+## Batch Pipelines
+
+Target SLA:
+
+
+< 24 Hours
+
+
+Examples:
+
+
+Invoices
+
+Payments
+
+Reference Data
+
+
+---
+
+## KPI Availability
+
+Target SLA:
+
+
+< 1 Hour
+
+
+after source data availability.
+
+---
+
+# Section Status
+
+Section 9: Orchestration & Pipeline Design
+
+Status: APPROVED AND FROZEN
+
+Version: 1.0
+
+
+
+
+---
 # Section 10: Semantic Layer & KPI Definitions
 
 ## Purpose
@@ -2995,14 +5897,14 @@ Every entity shall have a single approved source system.
 
 Example:
 
-```text
+
 Customer          → CRM
 Subscription      → Subscription Platform
 Invoice           → Billing Platform
 Payment           → Payment Gateway
 Product           → MDM
 Pricing Plan      → MDM
-```
+
 
 ---
 
@@ -3012,7 +5914,7 @@ Schema changes must be communicated before implementation.
 
 Examples:
 
-```text
+
 New Columns            → Allowed
 
 Column Removal         → Approval Required
@@ -3020,7 +5922,7 @@ Column Removal         → Approval Required
 Datatype Changes       → Approval Required
 
 Business Key Changes   → Not Allowed
-```
+
 
 ---
 
@@ -3028,7 +5930,7 @@ Business Key Changes   → Not Allowed
 
 Business keys must:
 
-```text
+
 Be Present
 
 Be Unique
@@ -3036,7 +5938,7 @@ Be Unique
 Be Stable
 
 Never Be Reused
-```
+
 
 ---
 
@@ -3044,7 +5946,7 @@ Never Be Reused
 
 All inbound data shall be validated against:
 
-```text
+
 Datatype Rules
 
 Nullability Rules
@@ -3052,7 +5954,7 @@ Nullability Rules
 Allowed Values
 
 Referential Integrity Rules
-```
+
 
 before publication into Silver.
 
@@ -3064,23 +5966,23 @@ before publication into Silver.
 
 Datatype:
 
-```text
+
 STRING
-```
+
 
 Rules:
 
-```text
+
 Not Null
 
 Unique
 
 Immutable
-```
+
 
 Examples:
 
-```text
+
 customer_id
 
 subscription_id
@@ -3092,7 +5994,7 @@ payment_id
 product_id
 
 plan_id
-```
+
 
 ---
 
@@ -3100,31 +6002,31 @@ plan_id
 
 Datatype:
 
-```text
+
 DATE
-```
+
 
 Format:
 
-```text
+
 YYYY-MM-DD
-```
+
 
 Example:
 
-```text
+
 2026-06-12
-```
+
 
 Applicable Fields:
 
-```text
+
 invoice_date
 
 subscription_start_date
 
 subscription_end_date
-```
+
 
 ---
 
@@ -3132,31 +6034,31 @@ subscription_end_date
 
 Datatype:
 
-```text
+
 TIMESTAMP
-```
+
 
 Timezone:
 
-```text
+
 UTC
-```
+
 
 Format:
 
-```text
+
 ISO-8601
-```
+
 
 Example:
 
-```text
+
 2026-06-12T14:30:25Z
-```
+
 
 Applicable Fields:
 
-```text
+
 event_timestamp
 
 created_timestamp
@@ -3164,7 +6066,7 @@ created_timestamp
 updated_timestamp
 
 payment_processed_timestamp
-```
+
 
 ---
 
@@ -3172,21 +6074,21 @@ payment_processed_timestamp
 
 Datatype:
 
-```text
+
 NUMERIC
-```
+
 
 Rules:
 
-```text
+
 No FLOAT Usage
 
 Precision Preserved
-```
+
 
 Applicable Fields:
 
-```text
+
 invoice_amount
 
 payment_amount
@@ -3196,7 +6098,7 @@ subscription_amount
 arr
 
 mrr
-```
+
 
 ---
 
@@ -3204,21 +6106,21 @@ mrr
 
 Allowed Values:
 
-```text
+
 TRUE
 
 FALSE
-```
+
 
 Not Allowed:
 
-```text
+
 Y/N
 
 1/0
 
 Yes/No
-```
+
 
 ---
 
@@ -3228,14 +6130,14 @@ Status fields must contain approved enumerated values.
 
 Example:
 
-```text
+
 subscription_status
 
 ACTIVE
 CANCELLED
 EXPIRED
 GRACE_PERIOD
-```
+
 
 ---
 
@@ -3406,7 +6308,7 @@ All inbound data shall be validated in Bronze/Silver ingestion pipelines.
 
 Validation Categories:
 
-```text
+
 Schema Validation
 
 Datatype Validation
@@ -3416,7 +6318,7 @@ Mandatory Field Validation
 Referential Integrity Validation
 
 Business Rule Validation
-```
+
 
 ---
 
@@ -3426,13 +6328,13 @@ Contract violations shall not stop ingestion into Bronze.
 
 Violations shall:
 
-```text
+
 Be Logged
 
 Be Monitored
 
 Be Reported Through Data Quality Framework
-```
+
 
 ---
 
