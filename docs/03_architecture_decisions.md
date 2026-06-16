@@ -415,7 +415,48 @@ Prevents KPI proliferation.
 
 
 ---
+## ADR-017: Event Streaming Platform
+Decision:
+Kafka selected as event streaming platform.
 
+Alternatives:
+- Direct DB → BigQuery
+- Batch Files
+- GCP Pub/Sub
+
+Reason:
+- CDC ecosystem maturity
+- Replay capability
+- Event log architecture
+- Multiple downstream consumers
+- Future real-time analytics roadmap
+
+Tradeoff:
+Higher operational overhead compared to Pub/Sub.
+---
+
+## ADR-018: Partitioning Strategy
+Decision:
+Partition by business entity identifier.
+
+customer_topic      -> customer_id
+subscription_topic  -> subscription_id
+invoice_topic       -> invoice_id
+payment_topic       -> payment_id
+usage_event_topic   -> customer_id
+
+Reason:
+Preserve ordering for CDC and customer-centric analytics.
+---
+## ADR-019: Durability Strategy
+Replication Factor = 3
+acks = all
+min.insync.replicas = 2
+
+Reason:
+Prevent data loss and support broker failures.
+
+---
 # Document Status
 
 Version: 1.0

@@ -77,7 +77,7 @@ AI Platform
 FastAPI
       ↓
 React UI
-```
+
 
 ---
 
@@ -175,7 +175,7 @@ React UI
 ┌─────────────────────────────────────────┐
 │         React Frontend UI               │
 └─────────────────────────────────────────┘
-```
+
 
 ---
 
@@ -231,7 +231,7 @@ bronze/
 ├── subscription/
 ├── payment/
 └── usage_event/
-```
+
 
 ---
 
@@ -259,7 +259,7 @@ silver_customer
 silver_subscription
 silver_payment
 silver_usage_event
-```
+
 
 ---
 
@@ -288,7 +288,7 @@ gold_revenue
 gold_customer_health
 gold_product_adoption
 gold_subscription_lifecycle
-```
+
 
 ---
 
@@ -353,7 +353,7 @@ Vector Database
 RAG Retrieval
     ↓
 LLM
-```
+
 
 ### Vector Store
 
@@ -361,13 +361,13 @@ Phase 1:
 
 
 pgvector
-```
+
 
 Future:
 
 
 Vertex AI Vector Search
-```
+
 
 ---
 
@@ -399,7 +399,7 @@ BigQuery
 Query Result
       ↓
 LLM Explanation
-```
+
 
 ---
 
@@ -482,7 +482,7 @@ FastAPI
 /api/v1/predictions
 /api/v1/chat
 /api/v1/agents
-```
+
 
 ---
 
@@ -498,7 +498,7 @@ Every business entity shall contain:
 
 
 tenant_id
-```
+
 
 ### Access Control
 
@@ -593,7 +593,7 @@ BigQuery
 DBT
 FastAPI
 OpenAI
-```
+
 
 ---
 
@@ -603,7 +603,7 @@ OpenAI
 Caching Layer
 Vector Search
 Agent Orchestration
-```
+
 
 ---
 
@@ -613,7 +613,7 @@ Agent Orchestration
 Multi-Agent Workflows
 Advanced Forecasting
 Real-Time Insights
-```
+
 
 ---
 
@@ -623,7 +623,7 @@ Real-Time Insights
 Flink Evaluation
 Lakehouse Evaluation
 Real-Time Decision Intelligence
-```
+
 
 ---
 
@@ -663,7 +663,7 @@ The following technologies are intentionally excluded from MVP and may be evalua
 
 ---
 
-# 16. Architecture Decisions
+## 16. Architecture Decisions
 
 ### Approved Decisions
 
@@ -689,6 +689,30 @@ The following technologies are intentionally excluded from MVP and may be evalua
 * Microservices
 * Dedicated Vector Search Platform
 
+---
+## Streaming Layer
+Source Systems
+      ↓
+Debezium CDC
+      ↓
+Kafka Cluster
+      ↓
+Dataflow Streaming
+      ↓
+GCS Bronze
+      ↓
+BigQuery Silver
+      ↓
+BigQuery Gold
+
+### Kafka Cluster
+3 Brokers
+
+Replication Factor = 3
+
+Leader election enabled
+
+Automatic failover supported
 ---
 
 # Status

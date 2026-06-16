@@ -312,10 +312,39 @@ Reason:
 
 ~7K Peak Events/Sec
 ```
-
+### Consumer Sizing
 Kafka comfortably supports projected throughput.
 
+Assumed Consumer Throughput
+
+≈ 2,000 events/sec
+
+Required consumers 
+7,000 / 2,000
+
+≈ 4 consumers
+
+### Partitioning Size
+Minimum Required Partitions = 4
+
+Provisioned Partitions = 24
+
+Reason:
+Growth
+Consumer Parallelism
+Rebalancing Flexibility
+Future Scaling
+
+Broker sizing:
+
+Broker Count = 3
+
+Replication Factor = 3
+
+Supports:
+Single Broker Failure
 ---
+
 
 ## BigQuery
 
