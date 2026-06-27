@@ -1,0 +1,11 @@
+environment: local
+
+kafka:
+  bootstrap_servers: localhost:29092
+
+storage:
+  bronze_root_path: data/bronze
+  silver_root_path: data/silver
+
+checkpoint:
+  root_path: checkpoints

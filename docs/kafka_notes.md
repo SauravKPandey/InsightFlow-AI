@@ -909,6 +909,230 @@ Business transformations occur in Silver and Gold.
 10. Final replay operational procedures
 
 ---
+# Schema Registry Strategy
+
+Purpose
+
+Provide centralized schema versioning, schema storage, and compatibility validation.
+
+Responsibilities
+
+- Store schema versions
+- Maintain schema history
+- Validate compatibility rules
+- Provide schemas to producers and consumers
+- Prevent breaking schema changes from entering the platform
+
+Non-Responsibilities
+
+Schema Registry does not:
+
+- Update downstream tables
+- Update ETL logic
+- Update dashboards
+- Guarantee consumer compatibility
+
+It validates schema compatibility, not consumer implementation correctness.
+
+---
+
+Compatibility Mode
+
+Selected Mode:
+
+BACKWARD
+
+Reason:
+
+Allows producers to evolve schemas while maintaining compatibility with existing consumers.
+
+Allowed Changes
+
+- Add optional fields
+- Add nullable columns
+
+Rejected Changes
+
+- Remove fields
+- Rename fields
+- Incompatible data type changes
+
+---
+
+Schema Evolution Workflow
+
+Producer
+↓
+Schema Registry Validation
+↓
+Schema Registration
+↓
+Kafka Publish
+
+Compatible changes are accepted.
+
+Breaking changes are rejected.
+---
+
+# Data Contract Strategy
+
+Purpose
+
+Define responsibilities and expectations between data producers and consumers.
+
+A data contract includes:
+
+- Topic ownership
+- Schema definition
+- Primary keys
+- Partitioning keys
+- Retention policies
+- SLAs
+- Compatibility policies
+- Change management process
+
+---
+
+Ownership Model
+
+Producer Team
+
+Owns:
+
+- Source schema
+- Event definitions
+- Event quality
+
+Platform Team
+
+Owns:
+
+- CDC ingestion
+- Kafka platform
+- Schema Registry
+- Bronze ingestion
+
+Consumer Teams
+
+Own:
+
+- Downstream processing logic
+- Consumer compatibility
+
+---
+
+Change Management
+
+Compatible Changes
+
+Examples:
+
+- New optional columns
+- Additional nullable fields
+
+Action:
+
+- Allowed
+- Alert generated
+- Consumer teams notified
+
+---
+
+Breaking Changes
+
+Examples:
+
+- Column removal
+- Column rename
+- Data type change
+
+Action:
+
+- Review required
+- Coordination required
+- Potential contract update
+
+---
+
+InsightFlow Principle
+
+Producers may introduce backward-compatible changes without blocking the platform.
+
+Breaking changes require coordination between producers and consumers.
+---
+# Consumer Group Design
+
+Consumers subscribe to topics, not partitions.
+
+Kafka automatically assigns partitions to consumers within a consumer group.
+
+Rules
+
+- One partition may only be assigned to one active consumer within a consumer group.
+- Multiple consumer groups may independently consume the same topic.
+- Maximum consumer parallelism equals the number of partitions.
+
+Example
+
+customer_topic
+
+P1
+P2
+P3
+P4
+
+analytics_group
+
+Consumer A → P1, P2
+
+Consumer B → P3, P4
+
+The consumer group collectively consumes all topic partitions.
+---
+# Schema Evolution Principles
+
+Bronze Layer
+
+- Always ingest events
+- Schema changes should never block Bronze ingestion
+- Preserve raw payload
+
+Silver Layer
+
+Validate schema compatibility.
+
+Compatible Changes
+
+- Add columns
+- Add optional attributes
+
+Action
+
+- Continue processing
+- Generate alert
+
+Breaking Changes
+
+- Remove columns
+- Rename columns
+- Incompatible type changes
+
+Action
+
+- Alert
+- DLQ
+- Manual review
+
+---
+
+Important Principle
+
+Schema compatibility does not guarantee consumer compatibility.
+
+Schema Registry validates schemas, not consumer implementations.
+
+
+---
 
 # 30. Freeze Criteria
 
@@ -922,3 +1146,5 @@ Kafka & CDC design can be considered frozen after completion of:
 * Replay Operations
 * Monitoring Strategy
 * Data Contracts
+
+

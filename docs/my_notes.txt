@@ -1,0 +1,26 @@
+brinze customer schema
+|-- key: binary (nullable = true)
+ |-- value: binary (nullable = true)
+ |-- topic: string (nullable = true)
+ |-- partition: integer (nullable = true)
+ |-- offset: long (nullable = true)
+ |-- timestamp: timestamp (nullable = true)
+ |-- timestampType: integer (nullable = true)
+ 
+ -----------------------------------------------
+ Silver Stream generic builder:
+ Bronze DataFrame
+        ↓
+Binary → String
+        ↓
+Return Silver DataFrame
+
+We will progresively add following to the silver stream builder code:
+
+Parse JSON - Done
+Extract Debezium Envelope - Done
+CDC Handling - Done
+Schema Validation
+Schema Evolution
+
+---------------------------------------------------

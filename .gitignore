@@ -1,0 +1,39 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Virtual Environment
+venv/
+.venv/
+
+# VS Code
+.vscode/
+
+# macOS
+.DS_Store
+
+# Environment variables
+.env
+
+# Spark
+spark-warehouse/
+metastore_db/
+derby.log
+
+# Generated data
+data/
+checkpoints/
+
+# Logs
+logs/
+*.log
+
+# Test artifacts
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Jupyter
+.ipynb_checkpoints/

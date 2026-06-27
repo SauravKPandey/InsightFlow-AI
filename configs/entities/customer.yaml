@@ -1,0 +1,68 @@
+# configs/entities/customer.yaml
+schema_version: 1
+entity_name: customer
+
+source:
+  topic: insightflow.public.customer
+
+business_keys: customer_id
+
+
+columns:
+
+  customer_id:
+    datatype: string
+    nullable: false
+    business_key: true
+
+  customer_name:
+    datatype: string
+    nullable: false
+
+  customer_status:
+    datatype: string
+    nullable: false
+
+  industry:
+    datatype: string
+    nullable: true
+
+  customer_size:
+    datatype: string
+    nullable: true
+
+  customer_tier:
+    datatype: string
+    nullable: true
+
+  customer_start_date:
+    datatype: date
+    nullable: true
+    source_format: epoch_days
+
+  customer_end_date:
+    datatype: date
+    nullable: true
+    source_format: epoch_days
+
+  created_timestamp:
+    datatype: timestamp
+    nullable: false
+    source_format: epoch_micros
+
+  updated_timestamp:
+    datatype: timestamp
+    nullable: false
+    source_format: epoch_micros
+
+cdc:
+
+  operation_column: op
+
+  event_timestamp_column: ts_ms
+
+  supported_operations:
+    - c
+    - u
+    - d
+    - r
