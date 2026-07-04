@@ -24,3 +24,168 @@ Schema Validation
 Schema Evolution
 
 ---------------------------------------------------
+
+Already implemented- learning done:
+Kafka, Debezium, CDC
+Spark Structured Streaming
+Bronze/Silver architecture
+Metadata-driven schema generation
+Generic entity mapping
+Streaming vs batch DataFrames
+Why foreachBatch() exists
+Why SCD2 needs historical state
+Why table formats exist
+
+Parking lot:
+        
+Iceberg
+What is a table format?
+Catalog
+Namespace
+Snapshots
+Manifest files
+Metadata files
+Hidden partitioning
+Time travel
+ACID transactions
+Optimistic concurrency
+MERGE internals
+Compaction
+Snapshot expiration
+Spark
+Adaptive Query Execution (AQE)
+Broadcast joins
+Shuffle optimization
+Partitioning strategies
+Bucketing
+Caching and persistence
+Watermarking
+Stateful streaming
+Data Modeling
+Star schema
+Snowflake schema
+Fact vs Dimension
+Slowly Changing Dimensions (all types)
+Surrogate keys
+Degenerate dimensions
+Bridge tables
+Data Platform
+Lakehouse architecture
+Medallion architecture (advanced topics)
+Data Catalog
+Data Lineage
+Data Contracts
+Data Quality frameworks
+Governance
+BigQuery
+Partitioned tables
+Clustering
+MERGE
+Materialized views
+BI Engine
+Cost optimization
+Platform Engineering
+CI/CD
+Infrastructure as Code
+Terraform
+Kubernetes
+Spark on Kubernetes
+Airflow deployment
+Monitoring & alerting
+AI Layer (later)
+Semantic layer
+MCP
+RAG
+Vector databases
+Agent orchestration
+
+-------------------------
+aRCHITECTURE WE ARE GOING TO FOLLOW:
+Postgres
+
+↓
+
+Debezium
+
+↓
+
+Kafka
+
+↓
+
+Spark
+
+↓
+
+Iceberg
+
+↓
+
+BigQuery
+
+↓
+
+DBT
+
+↓
+
+Power BI
+-------------
+                INGESTION
+
+Postgres
+      │
+Debezium
+      │
+Kafka
+      │
+Spark Streaming
+      │
+Bronze (Iceberg)
+      │
+Silver (Iceberg)
+
+────────────────────────────────────
+
+             SERVING
+
+BigQuery
+      │
+DBT
+      │
+Gold Models
+      │
+Power BI
+      │
+AI Agents
+
+------------------------------
+
+current implemenation finalized:
+                 Kafka
+                   │
+                   ▼
+          Raw Debezium Event
+                   │
+                   ▼
+      Bronze Iceberg (Raw Event Store)
+                   │
+         (No Parsing, No Mapping)
+                   │
+                   ▼
+          Debezium Parser
+                   │
+                   ▼
+           Entity Mapper
+                   │
+                   ▼
+             Normalize
+                   │
+                   ▼
+        Silver Iceberg (Business Table)
+                   │
+                   ▼
+              SCD Type 2
+                   │
+                   ▼
+             Gold Analytics

@@ -1,0 +1,29 @@
+columns:
+
+  key:
+    datatype: binary
+    nullable: true
+
+  value:
+    datatype: binary
+    nullable: false
+
+  topic:
+    datatype: string
+    nullable: false
+
+  partition:
+    datatype: integer
+    nullable: false
+
+  offset:
+    datatype: long
+    nullable: false
+
+  timestamp:
+    datatype: timestamp
+    nullable: true
+
+  timestampType:
+    datatype: integer
+    nullable: false

@@ -5,9 +5,16 @@ import argparse
 from pathlib import Path
 from pyspark.sql import SparkSession    
 from pyspark.sql.functions import col
+
+
 #fetch the project root directory 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
-sys.path.append(str(PROJECT_ROOT))
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+sys.path.append(str(PROJECT_ROOT / "spark"))
+#PROJECT_ROOT = Path.cwd()
+#sys.path.append(str(PROJECT_ROOT / "spark"))
+from framework.iceberg.schema_loader import load_platform_schema
+#from framework.iceberg.iceberg_utils import (ensure_namespace_exists)
+from framework.iceberg.table_manager import create_table_if_not_exists, ensure_namespace_exists, write_to_iceberg
 from common.config_loader import load_config
 from framework.metadata.entity_config_loader import (load_entity_config)
 from framework.transformation.silver_builder import (build_silver)
@@ -20,7 +27,7 @@ from pyspark.sql.types import (
     LongType,
     TimestampType
 )
-
+from framework.spark.spark_session import create_spark_session
 
 BRONZE_SCHEMA = StructType([
     StructField("key", BinaryType(), True),
@@ -50,62 +57,84 @@ def main():
     env = os.getenv("ENV", "local")
     print(f"Environment: {env}")
 
-    print(f"Starting Bronze Stream for Entity: {entity_name}")
+    print(f"Starting Silver Stream for Entity: {entity_name}")
 
     #Load configuration for environment and entity
     env_config = load_config(env)
     entity_config = load_entity_config(entity_name)
-    
 
-    #fetch env configuration, bronze storage path for reading parquet, silver storage path for write from the config_loader.py file
-    bronze_path = (f"{env_config['storage']['bronze_root_path']}/{entity_config['entity_name']}")
-    silver_path = f"{env_config['storage']['silver_root_path']}/{entity_config['entity_name']}"
-    
-    checkpoint_path = f"{env_config['checkpoint']['root_path']}/{silver_path}"
+    #silver schema path
+    silver_schema_path = PROJECT_ROOT / "configs" / "entities" / f"{entity_name}.yaml"
 
-    print(f"Bronze Path: {bronze_path}")
-    print(f"Silver Path: {silver_path}")
+    #create the bronze table and silver table names using the entity name from the entity configuration
+    catalog_name = env_config['iceberg']['catalog_name']
+    bronze_table = f"{catalog_name}.bronze.{entity_config['entity_name']}"
+    print(f"Bronze Table: {bronze_table}")
+    silver_table = f"{catalog_name}.silver.{entity_config['entity_name']}"
+    print(f"Silver Table: {silver_table}")
+    
+    #create a checkpoint path for the silver stream using the entity name from the entity configuration
+    checkpoint_path = (
+    f"{env_config['storage']['checkpoint_root_path']}/silver/{entity_config['entity_name']}"
+    )
     print(f"Checkpoint Path: {checkpoint_path}")        
-    #fetch entity configuration from the entity_config_loader.py file
-
-    #fetch schema from the entity configuration for the entity name provided in the command line argument
 
     #create Spark Session
-    spark = (
-        SparkSession.builder
-        .appName("BronzeStream")
-        .getOrCreate()
-    )
+    spark = create_spark_session("Silver Stream", env)
+        
     print("1. Spark Session Created")
 
     #Crete bronze schema to allow spark to read the bronze parquet files and convert to string format for silver layer processing
-    
+    silver_schema = load_platform_schema(silver_schema_path)  
+
+    #ensure the silver namespace exists in the iceberg catalog, if not create it
+    ensure_namespace_exists(spark, catalog_name, "silver")
+
+    #create the silver table in the iceberg catalog if it does not exist, using the silver schema and the silver path
+    create_table_if_not_exists(
+    spark=spark,
+    catalog=catalog_name,
+    namespace="silver",
+    table_name=entity_name,
+    schema=silver_schema
+    )
 
     #Read Bronze data from the bronze storage path in parquet format and convert to string format for Silver layer processing
     bronze_df = (
         spark.readStream
-        .schema(BRONZE_SCHEMA)
-        .format("parquet")
-        .load(bronze_path)
-        
+        .table(bronze_table)
     )
     print("2. Bronze Stream Created")
     #call silver builder function to process the bronze data and and transform for silver layer processing and write to silver storage path in parquet format
-    silver_df = build_silver(bronze_df, entity_config, env_config, entity_name)
+    silver_df = build_silver(bronze_df, silver_schema, env_config, entity_name)
     print("3. Silver DF Built")
-    
+    # Dropping not required cols
+    silver_df = silver_df.drop(
+    "topic",
+    "partition",
+    "offset",
+    "timestamp"
+)
     #write to silver storage path in parquet format with metadata and payload fields extracted from the bronze layer parquet data
-    querry = (
-        silver_df.writeStream
-        .outputMode("append")
-        .format("parquet")
-        .option("path", silver_path)
-        .option("checkpointLocation", checkpoint_path)
-        .start()
-        
-    )
+    query = (
+    silver_df.writeStream
+      .foreachBatch(
+            lambda batch_df, batch_id:
+                write_to_iceberg(
+                    batch_df=batch_df,
+                    batch_id=batch_id,
+                    table_name=silver_table,
+                    mode="append"
+                )
+      )
+      .option(
+          "checkpointLocation",
+          checkpoint_path
+      )
+      .start()
+)
     print("4. Stream Started")
-    querry.awaitTermination()
+    query.awaitTermination()
 
 if __name__ == "__main__":
     main()

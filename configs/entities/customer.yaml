@@ -54,6 +54,16 @@ columns:
     datatype: timestamp
     nullable: false
     source_format: epoch_micros
+  
+  op:
+    datatype: string
+    nullable: true
+
+  ts_ms:
+    datatype: timestamp
+    nullable: true
+    source_format: epoch_millis
+
 
 cdc:
 
@@ -66,3 +76,11 @@ cdc:
     - u
     - d
     - r
+scd:
+  type: 2
+  tracking_columns:
+    - customer_name
+    - customer_status
+    - industry
+    - customer_size
+    - customer_tier

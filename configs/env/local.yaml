@@ -4,8 +4,24 @@ kafka:
   bootstrap_servers: localhost:29092
 
 storage:
-  bronze_root_path: data/bronze
-  silver_root_path: data/silver
+  provider: gcs
+  bucket: insightflowai-data-prod
+  bronze_root_path: gs://insightflowai-data-prod/bronze
+  silver_root_path: gs://insightflowai-data-prod/silver
+  checkpoint_root_path: gs://insightflowai-data-prod/checkpoints
+  warehouse_root_path: gs://insightflowai-data-prod/warehouse
 
-checkpoint:
-  root_path: checkpoints
+
+gcp:
+  credentials_path: credentials/gcp-service-account.json
+
+iceberg:
+  catalog_name: insightflow
+  catalog_type: hadoop
+  warehouse: gs://insightflowai-data-prod/warehouse
+
+spark:
+  packages:
+    - org.apache.spark:spark-sql-kafka-0-10_2.13:4.1.2
+    - com.google.cloud.bigdataoss:gcs-connector:hadoop3-2.2.31
+    - org.apache.iceberg:iceberg-spark-runtime-4.1_2.13:1.11.0

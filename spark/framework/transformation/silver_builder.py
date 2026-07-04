@@ -41,11 +41,13 @@ def build_silver(bronze_df, entity_config, env_config, entity_name):
     )
 
     #get the parsed cdc df
-    
+    print("calling parse_debezium function to extract before, after, op, source, ts_ms from raw_payload")
     cdc_df = parse_debezium(bronze_decoded_df)
     
 
+
     #call map_entity fn to convert cddc even into entity-specific silver records
+    print("calling map_entity function to convert cdc event into entity-specific silver records")
     silver_df = map_entity(cdc_df, entity_config)
 
     #print("silver dataframe:", silver_df)

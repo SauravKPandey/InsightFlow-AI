@@ -11,6 +11,13 @@ from pyspark.sql import SparkSession
 from pyspark.sql.functions import col
 from common.config_loader import load_config
 from framework.metadata.entity_config_loader import (load_entity_config)
+from framework.spark.spark_session import create_spark_session
+from framework.iceberg.schema_loader import load_platform_schema
+from framework.iceberg.table_manager import (
+    ensure_namespace_exists,
+    create_table_if_not_exists,
+    write_to_iceberg
+)
 
 def main():
 
@@ -31,6 +38,8 @@ def main():
 
     print(f"Starting Bronze Stream for Entity: {entity_name}")
 
+    
+
     #Load configuration for environment and entity
     env_config = load_config(env)
     entity_config = load_entity_config(entity_name)
@@ -39,7 +48,10 @@ def main():
     bootstrap_servers = env_config["kafka"]["bootstrap_servers"]
     topic = entity_config["source"]["topic"]
     bronze_root = env_config["storage"]["bronze_root_path"]
-    checkpoint_path = env_config["checkpoint"]["root_path"]
+    checkpoint_path = f"{env_config['storage']['checkpoint_root_path']}/bronze/{entity_config['entity_name']}"
+    #Bronze schema path
+    bronze_schema_path = PROJECT_ROOT / "configs" / "framework" / "bronze_schema.yaml"
+    
 
     #create the bronze path using the entity name from the entity configuration
     bronze_path = (
@@ -47,19 +59,36 @@ def main():
         f"{entity_config['entity_name']}"
     )
     
-    #cretae checkpoint path using the entity name from the entity configuration
-    checkpoint_path = (
-        f"{checkpoint_path}/{bronze_path}" 
-    )
+    
 
     #create Spark Session
-    spark = (
-        SparkSession.builder
-        .appName("BronzeStream")
-        .getOrCreate() 
-    )
+    spark = create_spark_session("Bronze Stream", env)
 
     print("Spark Session Created")
+    '''
+    #Test if spark is able to write to path in GCS
+    spark.range(10).write.mode("overwrite").parquet(
+    "gs://insightflowai-data-prod/test/"
+    )
+    '''
+    bronze_schema = load_platform_schema(bronze_schema_path)
+    catalog = env_config["iceberg"]["catalog_name"]
+    bronze_table = f"{catalog}.bronze.{entity_name}"
+    ensure_namespace_exists(
+        spark,
+        catalog,
+        "bronze"
+    )
+    create_table_if_not_exists(
+        spark,
+        catalog,
+        "bronze",
+        entity_name,
+        bronze_schema
+
+    )
+
+    
 
     #Read data from Kafka topic and write to Bronze layer in Parquet format
     df = (
@@ -74,19 +103,21 @@ def main():
 
     df.printSchema()
 
-
-    #Write to Bronze layer in Parquet format with append mode and checkpointing for fault tolerance
-    query = (
-        df.writeStream
-        .format("parquet")
-        .option("path", bronze_path)
-        .outputMode("append")
-        .option("checkpointLocation", checkpoint_path)
-        .start()
+    #write to Iceberg Bronze table
+    query = (df.writeStream.foreachBatch(
+        lambda batch_df, batch_id: write_to_iceberg(
+            batch_df,
+            batch_id,
+            bronze_table,
+            mode="append"
+        )
+    ).option("checkpointLocation", checkpoint_path)
+    .start()
     )
 
     print("Bronze Streaming Query Started")
     query.awaitTermination()
+
 
 if __name__ == "__main__":
     main()

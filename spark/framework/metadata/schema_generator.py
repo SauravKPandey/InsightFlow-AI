@@ -33,6 +33,8 @@ def generate_schema(entity_config):
             spark_data_type = LongType()
         elif source_format == "epoch_days":
             spark_data_type = IntegerType()
+        elif source_format == "epoch_millis":
+            spark_data_type = LongType()
         else:
             spark_data_type = TYPE_MAPPING.get(data_type)()
 
