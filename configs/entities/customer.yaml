@@ -55,13 +55,16 @@ columns:
     nullable: false
     source_format: epoch_micros
   
+
+system_columns:
+
   op:
     datatype: string
-    nullable: true
+    nullable: false
 
   ts_ms:
     datatype: timestamp
-    nullable: true
+    nullable: false
     source_format: epoch_millis
 
 

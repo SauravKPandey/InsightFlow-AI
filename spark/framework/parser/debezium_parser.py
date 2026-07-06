@@ -70,6 +70,13 @@ def parse_debezium(bronze_decoded_df: DataFrame) -> DataFrame:
     cdc_df.select(get_json_object(col("after_json"), "$.updated_timestamp").alias("updated_timestamp")).show(5, truncate=False)
     cdc_df.select(get_json_object(col("after_json"), "$.customer_start_date").alias("customer_start_date")).show(5, truncate=False)
     cdc_df.select(get_json_object(col("after_json"), "$.customer_end_date").alias("customer_end_date")).show(5, truncate=False)
-    '''             
-                  
+                
+    cdc_df.printSchema()
+
+    cdc_df.select(
+    "op",
+    "ts_ms",
+    "after_json"
+    ).show(truncate=False) 
+    '''   
     return cdc_df

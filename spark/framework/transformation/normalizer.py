@@ -2,44 +2,64 @@ from pyspark.sql import DataFrame
 from pyspark.sql.functions import col, date_add, from_unixtime, timestamp_micros, lit, to_date
 
 
-def normalize(
-        mapped_df: DataFrame,
-        entity_config: dict
-    ) -> DataFrame:
+def normalize_section(df: DataFrame, metadata_dict: dict):
+
+    for column_name, metadata in metadata_dict.items():
+
+        if "source_format" not in metadata:
+            continue
+
+        source_format = metadata["source_format"]
+
+        if source_format == "epoch_micros":
+
+            df = df.withColumn(
+                column_name,
+                timestamp_micros(col(column_name))
+            )
+
+        elif source_format == "epoch_millis":
+
+            df = df.withColumn(
+                column_name,
+                from_unixtime(
+                    col(column_name).cast("long") / 1000
+                ).cast("timestamp")
+            )
+
+        elif source_format == "epoch_days":
+
+            df = df.withColumn(
+                column_name,
+                date_add(
+                    to_date(lit("1970-01-01")),
+                    col(column_name)
+                )
+            )
+
+        else:
+
+            raise ValueError(
+                f"Unsupported source format: {source_format}"
+            )
+
+    return df
+
+def normalize(mapped_df, entity_config):
+
     print("Running Normalizer")
-    """ Normalize the mapped DataFrame based on the entity configuration """
 
-    for column_name, metadata in entity_config["columns"].items():
-        print(entity_config["columns"].keys())
-        print(f"Column: {column_name}")
-        
-        if "source_format" in metadata:
-            source_format = metadata["source_format"]
-            print(f"Source format: {repr(source_format)}")
-            if source_format == "epoch_micros":
-                mapped_df = mapped_df.withColumn(
-                    column_name,
-                    timestamp_micros(col(column_name))
-                )
-            elif source_format == "epoch_days":
-                mapped_df = mapped_df.withColumn(
-                    column_name,
-                    date_add(to_date(lit("1970-01-01")), col(column_name))
+    mapped_df = normalize_section(
+        mapped_df,
+        entity_config["columns"]
+    )
 
-                )
-            elif source_format == "epoch_millis":
-                print(">>>> ENTERED epoch_millis <<<<")
-                mapped_df = mapped_df.withColumn(
-                    column_name,
-                    from_unixtime(
-            col(column_name).cast("long") / 1000
-        ).cast("timestamp")
-                )
-            else:
-                raise ValueError(f"Unsupported source format: {source_format} for column: {column_name}")
-            
-            
+    mapped_df = normalize_section(
+        mapped_df,
+        entity_config["system_columns"]
+    )
+
     print("Normalizer Completed")
-    return mapped_df
 
+    return mapped_df
 

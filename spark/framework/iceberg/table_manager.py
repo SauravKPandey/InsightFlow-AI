@@ -34,6 +34,16 @@ def ensure_namespace_exists(
         # Create the namespace if it does not exist
         spark.sql(f"CREATE NAMESPACE {catalog}.{namespace}")
 
+def build_iceberg_table_cols(schema: dict, column_type: str, columns: list = []):
+    
+    for column_name, column_config in schema[column_type].items():
+        datatype = TYPE_MAPPING[column_config["datatype"]]
+
+        nullable = "" if column_config["nullable"] else "NOT NULL"
+
+        columns.append(
+            f"{column_name} {datatype} {nullable}".strip()
+        )
 
 
 def generate_create_table_sql(
@@ -56,6 +66,18 @@ def generate_create_table_sql(
     """
     columns = []
 
+    #business columns
+    build_iceberg_table_cols(schema,"columns", columns)
+
+    print("Columns - busiines: ", columns)
+
+    #system columns
+    if "system_columns" in schema:
+        build_iceberg_table_cols(schema,"system_columns", columns)
+    print("Columns - Full: ", columns)
+
+    """ 
+
     for column_name, column_config in schema["columns"].items():
 
         datatype = TYPE_MAPPING[column_config["datatype"]]
@@ -65,6 +87,9 @@ def generate_create_table_sql(
         columns.append(
             f"{column_name} {datatype} {nullable}".strip()
         )
+    
+    """
+    
 
     column_sql = ",\n".join(columns)
     create_table_sql = f"""

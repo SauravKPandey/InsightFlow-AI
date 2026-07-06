@@ -25,16 +25,36 @@ def map_entity(cdc_df : DataFrame, entity_config: dict) -> DataFrame:
 
     #create business columns from metadata yaml file
     business_columns = [col(f"after_struct.{col_name}").alias(col_name) for col_name in entity_config["columns"].keys()]
+    system_columns = [col(column_name) for column_name in entity_config.get("system_columns", {})]
 
     #Select the business columns from the entity DataFrame
     mapped_df = entity_df.select(*business_columns,
+                                 *system_columns,
                                  col("topic"),
                                  col("partition"),
                                  col("offset"),
                                  col("timestamp")
                                 )
+    ''' 
+    mapped_df.printSchema()
+
+    mapped_df.select(
+        "op",
+        "ts_ms"
+    ).show(truncate=False)
+    '''
+
     mapped_df = normalize(mapped_df, entity_config)
     print("Entity Mapping Completed")
+
+    '''
+
+    mapped_df.select(
+        "op",
+        "ts_ms"
+    ).show(truncate=False)
+
+    '''
                                                                                             
 
     return mapped_df

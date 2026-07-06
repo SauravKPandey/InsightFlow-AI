@@ -4,8 +4,8 @@ from pathlib import Path
 import argparse
 print("Creating Spark Session...")
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
-sys.path.append(str(PROJECT_ROOT))
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+sys.path.append(str(PROJECT_ROOT / "spark"))
 
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import col
