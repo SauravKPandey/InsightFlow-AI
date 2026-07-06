@@ -2,7 +2,7 @@ from pyspark.sql import DataFrame
 from pyspark.sql.functions import col, date_add, from_unixtime, timestamp_micros, lit, to_date
 
 
-def normalize_section(df: DataFrame, metadata_dict: dict):
+def normalize_section(df: DataFrame, metadata_dict: dict, logger=None):
 
     for column_name, metadata in metadata_dict.items():
 
@@ -45,21 +45,23 @@ def normalize_section(df: DataFrame, metadata_dict: dict):
 
     return df
 
-def normalize(mapped_df, entity_config):
+def normalize(mapped_df, entity_config, logger=None):
 
     print("Running Normalizer")
 
     mapped_df = normalize_section(
         mapped_df,
-        entity_config["columns"]
+        entity_config["columns"],
+        logger=logger
     )
 
     mapped_df = normalize_section(
         mapped_df,
-        entity_config["system_columns"]
+        entity_config["system_columns"],
+        logger=logger
     )
 
-    print("Normalizer Completed")
+    logger.info("Normalizer Completed")
 
     return mapped_df
 

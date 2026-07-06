@@ -15,19 +15,22 @@ from framework.mapper.entity_mapper import (map_entity)
 
 
 
-def build_silver(bronze_df, entity_config, env_config, entity_name):
+def build_silver(bronze_df, entity_config, env_config, entity_name, logger=None):
     """
     Silver Builder function to read Bronze data, process it, and write to Silver layer.
     """
-    print("Starting Silver Builder...")
+    if logger:
+        logger.info("Starting Silver Builder...")
+    else:
+        print("Starting Silver Builder...")
 
     
-    print("Bronze Data Read Successfully from stream file")
+    logger.info("Bronze Data Read Successfully from stream file")
     silver_write_path = env_config["storage"]["silver_root_path"] + f"/{entity_name}"
-    print(f"Silver Data will be written to: {silver_write_path}")
+    logger.info(f"Silver Data will be written to: {silver_write_path}")
 
     #Read Parquet files from Bronze layer and convert to string format for Silver layer processing
-    print("Extracting Required Fields for Silver Layer Processing...")
+    logger.info("Extracting Required Fields for Silver Layer Processing...")
 
     
     bronze_decoded_df = bronze_df.select(
@@ -41,14 +44,14 @@ def build_silver(bronze_df, entity_config, env_config, entity_name):
     )
 
     #get the parsed cdc df
-    print("calling parse_debezium function to extract before, after, op, source, ts_ms from raw_payload")
-    cdc_df = parse_debezium(bronze_decoded_df)
+    logger.info("calling parse_debezium function to extract before, after, op, source, ts_ms from raw_payload")
+    cdc_df = parse_debezium(bronze_decoded_df, logger=logger)
     
 
 
     #call map_entity fn to convert cddc even into entity-specific silver records
     print("calling map_entity function to convert cdc event into entity-specific silver records")
-    silver_df = map_entity(cdc_df, entity_config)
+    silver_df = map_entity(cdc_df, entity_config,logger=logger)
 
     #print("silver dataframe:", silver_df)
 

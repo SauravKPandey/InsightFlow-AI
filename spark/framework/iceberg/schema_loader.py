@@ -5,7 +5,7 @@ from pathlib import Path
 import yaml
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 
-def load_platform_schema(schema_path: str):
+def load_platform_schema(schema_path: str, logger=None) -> dict:
     """
     Load the schema for a given entity from the platform schemas directory.
 

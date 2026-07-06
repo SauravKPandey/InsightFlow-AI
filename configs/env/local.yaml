@@ -25,3 +25,16 @@ spark:
     - org.apache.spark:spark-sql-kafka-0-10_2.13:4.1.2
     - com.google.cloud.bigdataoss:gcs-connector:hadoop3-2.2.31
     - org.apache.iceberg:iceberg-spark-runtime-4.1_2.13:1.11.0
+
+logging:
+  level: INFO
+
+  console:
+    enabled: true
+
+  file:
+    enabled: true
+    path: logs
+
+  cloud:
+    enabled: false

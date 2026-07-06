@@ -9,9 +9,9 @@ from pyspark.sql import DataFrame
 from pyspark.sql.functions import from_json, col
 from framework.transformation.normalizer import normalize
 
-def map_entity(cdc_df : DataFrame, entity_config: dict) -> DataFrame:
+def map_entity(cdc_df : DataFrame, entity_config: dict, logger=None) -> DataFrame:
     
-    print("Running Entity Mapper")
+    logger.info("Running Entity Mapper")
     #Fetch the entity schema from the entity configuration using the generate_schema function
     entity_schema = generate_schema(entity_config)
 
@@ -44,8 +44,8 @@ def map_entity(cdc_df : DataFrame, entity_config: dict) -> DataFrame:
     ).show(truncate=False)
     '''
 
-    mapped_df = normalize(mapped_df, entity_config)
-    print("Entity Mapping Completed")
+    mapped_df = normalize(mapped_df, entity_config, logger=logger)
+    logger.info("Entity Mapping Completed")
 
     '''
 

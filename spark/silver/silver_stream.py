@@ -28,6 +28,9 @@ from pyspark.sql.types import (
     TimestampType
 )
 from framework.spark.spark_session import create_spark_session
+from framework.logging.logger import get_logger
+
+
 
 BRONZE_SCHEMA = StructType([
     StructField("key", BinaryType(), True),
@@ -63,32 +66,38 @@ def main():
     env_config = load_config(env)
     entity_config = load_entity_config(entity_name)
 
+    #configure logging
+    logger = get_logger(
+    "silver_Stream",
+    env_config
+    )
     #silver schema path
     silver_schema_path = PROJECT_ROOT / "configs" / "entities" / f"{entity_name}.yaml"
 
     #create the bronze table and silver table names using the entity name from the entity configuration
     catalog_name = env_config['iceberg']['catalog_name']
     bronze_table = f"{catalog_name}.bronze.{entity_config['entity_name']}"
-    print(f"Bronze Table: {bronze_table}")
+    logger.info(f"Bronze Table: {bronze_table}")
+
     silver_table = f"{catalog_name}.silver.{entity_config['entity_name']}"
-    print(f"Silver Table: {silver_table}")
+    logger.info(f"Silver Table: {silver_table}")
     
     #create a checkpoint path for the silver stream using the entity name from the entity configuration
     checkpoint_path = (
     f"{env_config['storage']['checkpoint_root_path']}/silver/{entity_config['entity_name']}"
     )
-    print(f"Checkpoint Path: {checkpoint_path}")        
+    logger.info(f"Checkpoint Path: {checkpoint_path}")        
 
     #create Spark Session
-    spark = create_spark_session("Silver Stream", env)
+    spark = create_spark_session("Silver Stream", env,logger=logger)
         
-    print("1. Spark Session Created")
+    logger.info("1. Spark Session Created")
 
     #Crete bronze schema to allow spark to read the bronze parquet files and convert to string format for silver layer processing
-    silver_schema = load_platform_schema(silver_schema_path)  
+    silver_schema = load_platform_schema(silver_schema_path, logger=logger)  
 
     #ensure the silver namespace exists in the iceberg catalog, if not create it
-    ensure_namespace_exists(spark, catalog_name, "silver")
+    ensure_namespace_exists(spark, catalog_name, "silver", logger=logger)
 
     #create the silver table in the iceberg catalog if it does not exist, using the silver schema and the silver path
     create_table_if_not_exists(
@@ -96,7 +105,8 @@ def main():
     catalog=catalog_name,
     namespace="silver",
     table_name=entity_name,
-    schema=silver_schema
+    schema=silver_schema,
+    logger=logger
     )
 
     #Read Bronze data from the bronze storage path in parquet format and convert to string format for Silver layer processing
@@ -104,10 +114,10 @@ def main():
         spark.readStream
         .table(bronze_table)
     )
-    print("2. Bronze Stream Created")
+    logger.info("2. Bronze Stream Created")
     #call silver builder function to process the bronze data and and transform for silver layer processing and write to silver storage path in parquet format
-    silver_df = build_silver(bronze_df, silver_schema, env_config, entity_name)
-    print("3. Silver DF Built")
+    silver_df = build_silver(bronze_df, silver_schema, env_config, entity_name, logger=logger)
+    logger.info("3. Silver DF Built")
     # Dropping not required cols
     silver_df = silver_df.drop(
     "topic",
@@ -124,7 +134,9 @@ def main():
                     batch_df=batch_df,
                     batch_id=batch_id,
                     table_name=silver_table,
-                    mode="append"
+                    mode="append",
+                    logger = logger
+
                 )
       )
       .option(
@@ -133,7 +145,7 @@ def main():
       )
       .start()
 )
-    print("4. Stream Started")
+    logger.info("4. Stream Started")
     query.awaitTermination()
 
 if __name__ == "__main__":

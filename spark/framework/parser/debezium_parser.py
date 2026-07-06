@@ -1,7 +1,7 @@
 from pyspark.sql import DataFrame
 from pyspark.sql.functions import get_json_object, col
 
-def parse_debezium(bronze_decoded_df: DataFrame) -> DataFrame:
+def parse_debezium(bronze_decoded_df: DataFrame, logger=None) -> DataFrame:
 
     print("Running Debezium Parser")
     """
@@ -63,7 +63,7 @@ def parse_debezium(bronze_decoded_df: DataFrame) -> DataFrame:
 
         col("raw_payload")
     )
-    print("Debezium Parser Completed")
+    logger.info("Debezium Parser Completed")
     #Test timestamp col values
     '''
     cdc_df.select(get_json_object(col("after_json"), "$.created_timestamp").alias("created_timestamp")).show(5, truncate=False)

@@ -18,10 +18,12 @@ from framework.iceberg.table_manager import (
     create_table_if_not_exists,
     write_to_iceberg
 )
+from framework.logging.logger import get_logger
 
 def main():
 
     #get entity name and environment from command line arguments
+    
 
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -43,6 +45,12 @@ def main():
     #Load configuration for environment and entity
     env_config = load_config(env)
     entity_config = load_entity_config(entity_name)
+
+    #logging configs
+    logger = get_logger(
+    f"bronze_Stream/{entity_name}",
+    env_config
+    )
 
     ##Read configuration values for Kafka, root folder for storage paths and checkpoint paths from the loaded configurations
     bootstrap_servers = env_config["kafka"]["bootstrap_servers"]

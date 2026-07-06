@@ -2,7 +2,7 @@ from pyspark.sql import SparkSession
 from common.config_loader import load_config
 
 
-def create_spark_session(app_name: str, env:str):
+def create_spark_session(app_name: str, env:str, logger=None) -> SparkSession:
     env_config = load_config(env)
 
     credentials_path = env_config["gcp"]["credentials_path"]
