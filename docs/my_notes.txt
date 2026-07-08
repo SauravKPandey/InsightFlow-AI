@@ -189,3 +189,7 @@ current implemenation finalized:
                    │
                    ▼
              Gold Analytics
+
+Errors/fail tlerance:
+scenario:
+1. While atempting to create table, network lost and spark could not connect to gcs mid-process

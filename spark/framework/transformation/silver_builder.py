@@ -1,6 +1,7 @@
 
 import sys
 from pathlib import Path
+from framework.validation.validator import validate
 print("Creating Spark Session...")
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -53,6 +54,8 @@ def build_silver(bronze_df, entity_config, env_config, entity_name, logger=None)
     print("calling map_entity function to convert cdc event into entity-specific silver records")
     silver_df = map_entity(cdc_df, entity_config,logger=logger)
 
+    valid_df, invalid_df = validate(silver_df, entity_config)
+
     #print("silver dataframe:", silver_df)
 
-    return silver_df
+    return valid_df,invalid_df

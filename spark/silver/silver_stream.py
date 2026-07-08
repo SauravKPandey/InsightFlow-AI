@@ -116,18 +116,26 @@ def main():
     )
     logger.info("2. Bronze Stream Created")
     #call silver builder function to process the bronze data and and transform for silver layer processing and write to silver storage path in parquet format
-    silver_df = build_silver(bronze_df, silver_schema, env_config, entity_name, logger=logger)
+    valid_df, invalid_df = build_silver(bronze_df, silver_schema, env_config, entity_name, logger=logger)
     logger.info("3. Silver DF Built")
+
+    #print("Valid Rows")
+    #valid_df.show()
+
+    #print("Invalid Rows")
+    #invalid_df.show(truncate=False)
+
     # Dropping not required cols
-    silver_df = silver_df.drop(
+    valid_df = valid_df.drop(
     "topic",
     "partition",
     "offset",
-    "timestamp"
+    "timestamp",
+    "Validation_Error"
 )
     #write to silver storage path in parquet format with metadata and payload fields extracted from the bronze layer parquet data
     query = (
-    silver_df.writeStream
+    valid_df.writeStream
       .foreachBatch(
             lambda batch_df, batch_id:
                 write_to_iceberg(

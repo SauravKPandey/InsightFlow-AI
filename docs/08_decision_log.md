@@ -2683,7 +2683,269 @@ Data Freshness
 ```
 
 ---
+# ADR-009: Metadata-Driven Validation Framework
 
+**Status:** Accepted
+
+## Context
+
+InsightFlow is a metadata-driven streaming platform where data flows through:
+
+Kafka → Bronze → Silver → Gold
+
+Initially, validation was designed as a sequence of filters where each validation rule removed failed records before the next validation executed.
+
+This approach was rejected because:
+
+- Only the first validation failure per record would be captured.
+- The same record could require multiple replay cycles before becoming valid.
+- Poor debugging experience for operations teams.
+- Does not align with enterprise data quality frameworks.
+
+---
+
+# Decision
+
+InsightFlow will implement a centralized **Validation Engine** instead of sequential validation filters.
+
+Every record will be evaluated against **all applicable validation rules** before determining whether it is valid or invalid.
+
+Validation rules will **never remove rows** from the DataFrame during execution.
+
+Instead, each validation rule will append validation failures to a common metadata column.
+
+Rows will be split into Valid and Invalid DataFrames only after all validations have completed.
+
+---
+
+# Validation Flow
+
+```
+Bronze
+    ↓
+Parser
+    ↓
+Entity Mapper
+    ↓
+Normalizer
+    ↓
+Initialize validation_errors
+    ↓
+Not Null Validation
+    ↓
+Datatype Validation
+    ↓
+Allowed Values Validation
+    ↓
+Future Validation Rules
+    ↓
+Split
+
+validation_errors == []  ─────► Valid DataFrame
+
+validation_errors != []  ─────► Invalid DataFrame (DLQ)
+```
+
+---
+
+# Validation Metadata
+
+Every DataFrame entering the Validation Engine will contain an additional metadata column.
+
+```
+validation_errors
+```
+
+Type:
+
+```
+ARRAY<STRUCT<
+    rule: STRING,
+    column: STRING,
+    message: STRING
+>>
+```
+
+Example:
+
+```json
+[
+  {
+    "rule": "NOT_NULL",
+    "column": "customer_id",
+    "message": "customer_id cannot be null"
+  },
+  {
+    "rule": "ALLOWED_VALUES",
+    "column": "customer_status",
+    "message": "customer_status must be ACTIVE or INACTIVE"
+  }
+]
+```
+
+Structured validation metadata was selected over plain strings to support:
+
+- Root cause analysis
+- Operational dashboards
+- Validation analytics
+- Replay tooling
+- Future monitoring
+
+---
+
+# Valid / Invalid Determination
+
+No separate validation_status column will be maintained.
+
+Validity will always be derived from:
+
+```
+size(validation_errors)
+```
+
+```
+size(validation_errors) == 0
+```
+
+→ Valid
+
+```
+size(validation_errors) > 0
+```
+
+→ Invalid
+
+---
+
+# Initial Validation Rules
+
+Phase 1
+
+- Not Null Validation
+- Datatype Conversion Validation
+- Allowed Values Validation
+
+Future Enhancements
+
+- Length Validation
+- Regex Validation
+- Numeric Range Validation
+- Date Range Validation
+- Business Rule Validation
+- Primary Key Validation
+- Referential Integrity Validation
+- Freshness Validation
+- CDC Validation
+
+---
+
+# Component Responsibilities
+
+## Normalizer
+
+Responsible only for datatype conversion.
+
+Examples:
+
+- epoch_days → DATE
+- epoch_millis → TIMESTAMP
+- epoch_micros → TIMESTAMP
+
+No validation logic will exist inside the Normalizer.
+
+---
+
+## Validation Engine
+
+Responsible only for evaluating metadata-driven validation rules.
+
+It never performs datatype conversions.
+
+It never writes to storage.
+
+Its only responsibility is to enrich each record with validation metadata.
+
+---
+
+## DLQ
+
+The DLQ is responsible only for storing Invalid DataFrames.
+
+It is **not** responsible for identifying invalid records.
+
+---
+
+# Failure Classification
+
+InsightFlow distinguishes between Platform Failures and Data Quality Failures.
+
+## Platform Failures
+
+Examples:
+
+- Spark Executor failure
+- GCS unavailable
+- Iceberg Catalog unavailable
+- Kafka unavailable
+- Network timeout
+- Out Of Memory
+
+Treatment:
+
+- Retry
+- Restart
+- Alert
+
+No DLQ is used.
+
+Structured Streaming checkpointing guarantees replay.
+
+---
+
+## Data Quality Failures
+
+Examples:
+
+- Required field missing
+- Invalid datatype
+- Invalid enum
+- Invalid business values
+
+Treatment:
+
+- Record validation failure
+- Continue processing valid records
+- Route invalid records to DLQ
+
+---
+
+# Design Principles
+
+- Metadata-driven
+- Generic across all entities
+- Every record evaluated against every rule
+- One validation pass per batch
+- One DLQ record per failed record
+- All validation failures captured together
+- Easily extensible by adding new validation rules
+- Validation orchestration remains unchanged as new rules are added
+- Platform failures are handled through retry and restart, not DLQ
+
+---
+
+# Benefits
+
+- Eliminates multiple replay cycles for the same record
+- Captures all validation failures in a single execution
+- Improves operational debugging
+- Simplifies replay
+- Aligns with enterprise data quality frameworks such as Great Expectations, Databricks Expectations and Deequ
+- Maintains a clean separation between transformation, validation and persistence
+
+
+
+
+------
 # Section Status
 
 Section 5: Physical Data Model
