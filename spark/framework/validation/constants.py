@@ -12,3 +12,5 @@ VALIDATION_ERROR_SCHEMA = ArrayType(StructType([
     StructField("error_message", StringType(), False)
 ])) 
 
+
+TEMP_COLUMN_PREFIX = "__raw_"

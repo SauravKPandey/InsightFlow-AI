@@ -21,8 +21,9 @@ from pyspark.sql.functions import lit, col, size
 
 VALIDATORS = {
     validate_not_null,
-    #validate_allowed_values,
-    #validate_datatype
+    validate_datatype,
+    validate_allowed_values
+    
 }
 def validate(
         df: DataFrame,
@@ -46,12 +47,12 @@ def validate(
     for validator in VALIDATORS:
         df = validator(df, entity_config)
 
-
-    valid_df = df.filter((df.Validation_Error.isNull() ) | (size(df.Validation_Error) == 0)    )
-    invalid_df = df.filter(size(df.Validation_Error) > 0)
+    
+    #valid_df = df.filter((df.Validation_Error.isNull() ) | (size(df.Validation_Error) == 0)    )
+    #invalid_df = df.filter(size(df.Validation_Error) > 0)
 
 
         # This is a placeholder for the actual validation code
-    return valid_df, invalid_df 
+    return df 
     
 

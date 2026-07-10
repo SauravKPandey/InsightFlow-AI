@@ -13,7 +13,7 @@ from pyspark.sql.functions import from_json
 from framework.metadata.entity_config_loader import (load_entity_config)
 from framework.parser.debezium_parser import (parse_debezium)
 from framework.mapper.entity_mapper import (map_entity)
-
+from framework.cleanup.cleaner import cleanup
 
 
 def build_silver(bronze_df, entity_config, env_config, entity_name, logger=None):
@@ -54,8 +54,11 @@ def build_silver(bronze_df, entity_config, env_config, entity_name, logger=None)
     print("calling map_entity function to convert cdc event into entity-specific silver records")
     silver_df = map_entity(cdc_df, entity_config,logger=logger)
 
-    valid_df, invalid_df = validate(silver_df, entity_config)
+    validated_df = validate(silver_df, entity_config)
+    validated_df = cleanup(validated_df)
+    
+
 
     #print("silver dataframe:", silver_df)
 
-    return valid_df,invalid_df
+    return validated_df

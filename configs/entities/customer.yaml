@@ -22,6 +22,9 @@ columns:
   customer_status:
     datatype: string
     nullable: false
+    allowed_values:
+      - ACTIVE
+      - INACTIVE
 
   industry:
     datatype: string
@@ -34,6 +37,10 @@ columns:
   customer_tier:
     datatype: string
     nullable: true
+    allowed_values:
+      - Gold
+      - Platinum
+      - Silver
 
   customer_start_date:
     datatype: date

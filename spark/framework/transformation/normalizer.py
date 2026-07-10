@@ -1,6 +1,6 @@
 from pyspark.sql import DataFrame
 from pyspark.sql.functions import col, date_add, from_unixtime, timestamp_micros, lit, to_date
-
+from framework.validation.constants import TEMP_COLUMN_PREFIX
 
 def normalize_section(df: DataFrame, metadata_dict: dict, logger=None):
 
@@ -10,6 +10,9 @@ def normalize_section(df: DataFrame, metadata_dict: dict, logger=None):
             continue
 
         source_format = metadata["source_format"]
+        raw_column = f"{TEMP_COLUMN_PREFIX}{column_name}"
+        #Preserving original column value in a new column with __raw_ prefix to validate the original value in case of any transformation or normalization
+        df = df.withColumn(raw_column, col(column_name))
 
         if source_format == "epoch_micros":
 

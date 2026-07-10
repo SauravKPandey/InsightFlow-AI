@@ -19,7 +19,9 @@ def validate_not_null(
     """
     # Implementation of the not null validation logic goes here
     for column, rules in entity_config.get("columns", {}).items():
+        print(f"Column: {column}, nullable: {rules['nullable']}")
         if rules.get("nullable", True):
+            print(f"Skipping not null validation for column: {column} as it is allowed to be null")
             continue  # Skip columns that are allowed to be null
         df = append_validation_error(
             df,

@@ -18,6 +18,7 @@ from framework.iceberg.table_manager import create_table_if_not_exists, ensure_n
 from common.config_loader import load_config
 from framework.metadata.entity_config_loader import (load_entity_config)
 from framework.transformation.silver_builder import (build_silver)
+from framework.monitoring.summary import summarize
 from pyspark.sql.types import (
     StructType,
     StructField,
@@ -29,7 +30,7 @@ from pyspark.sql.types import (
 )
 from framework.spark.spark_session import create_spark_session
 from framework.logging.logger import get_logger
-
+from pyspark.sql.functions import col, size
 
 
 BRONZE_SCHEMA = StructType([
@@ -42,6 +43,42 @@ BRONZE_SCHEMA = StructType([
     StructField("timestampType", StringType(), True)
 ])
 
+def process_batch(
+    batch_df,
+    batch_id,
+    entity_name,
+    silver_table,
+    logger
+    ):
+
+    valid_df = batch_df.filter((batch_df.Validation_Error.isNull() ) | (size(batch_df.Validation_Error) == 0)    )
+    invalid_df = batch_df.filter(size(batch_df.Validation_Error) > 0)
+
+
+    metrics = summarize(
+        valid_df=valid_df,
+        invalid_df=invalid_df,
+        entity_name=entity_name,
+        batch_id=batch_id
+    )
+
+    # TODO
+    # write_to_dlq(...)
+
+    # TODO
+    # send_alert(...)
+
+    valid_df = valid_df.drop(
+        "Validation_Error"
+    )
+
+    write_to_iceberg(
+        batch_df=valid_df,
+        batch_id=batch_id,
+        table_name=silver_table,
+        mode="append",
+        logger=logger
+    )
 
 def main():
     
@@ -116,8 +153,10 @@ def main():
     )
     logger.info("2. Bronze Stream Created")
     #call silver builder function to process the bronze data and and transform for silver layer processing and write to silver storage path in parquet format
-    valid_df, invalid_df = build_silver(bronze_df, silver_schema, env_config, entity_name, logger=logger)
+    validated_df = build_silver(bronze_df, silver_schema, env_config, entity_name, logger=logger)
     logger.info("3. Silver DF Built")
+
+
 
     #print("Valid Rows")
     #valid_df.show()
@@ -126,23 +165,22 @@ def main():
     #invalid_df.show(truncate=False)
 
     # Dropping not required cols
-    valid_df = valid_df.drop(
+    validated_df = validated_df.drop(
     "topic",
     "partition",
     "offset",
     "timestamp",
-    "Validation_Error"
 )
     #write to silver storage path in parquet format with metadata and payload fields extracted from the bronze layer parquet data
     query = (
-    valid_df.writeStream
+    validated_df.writeStream
       .foreachBatch(
             lambda batch_df, batch_id:
-                write_to_iceberg(
+                process_batch(
                     batch_df=batch_df,
                     batch_id=batch_id,
-                    table_name=silver_table,
-                    mode="append",
+                    entity_name=entity_name,
+                    silver_table=silver_table,
                     logger = logger
 
                 )
