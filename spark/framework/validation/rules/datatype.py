@@ -31,9 +31,9 @@ def validate_datatype(
             continue  # Skip columns that are not present in the DataFrame
 
         # Validate if the column transformation was successful and the column is not null
-            raw_column = f"TEMP_COLUMN_PREFIX{column}"    
+        raw_column = f"{TEMP_COLUMN_PREFIX}{column}"    
            
-            df = append_validation_error(
+        df = append_validation_error(
                 df,
                 condition=col(column).isNotNull() & col(raw_column).isNull(),  # Only check non-null values for datatype validation
                 rule=RULE_NAME,

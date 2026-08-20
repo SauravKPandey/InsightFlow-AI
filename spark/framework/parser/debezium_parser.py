@@ -1,7 +1,7 @@
 from pyspark.sql import DataFrame
 from pyspark.sql.functions import get_json_object, col
 
-def parse_debezium(bronze_decoded_df: DataFrame, logger=None) -> DataFrame:
+def parse_debezium(bronze_decoded_df: DataFrame, logger=None, replay=False) -> DataFrame:
 
     print("Running Debezium Parser")
     """
@@ -29,40 +29,82 @@ def parse_debezium(bronze_decoded_df: DataFrame, logger=None) -> DataFrame:
 
             raw_payload
     """
-    cdc_df = bronze_decoded_df.select(
-
-        get_json_object(
-            col("raw_payload"),
-            "$.payload.before"
-        ).alias("before_json"),
-
-        get_json_object(
-            col("raw_payload"),
-            "$.payload.after"
-        ).alias("after_json"),
-
-        get_json_object(
-            col("raw_payload"),
-            "$.payload.op"
-        ).alias("op"),
-
-        get_json_object(
-            col("raw_payload"),
-            "$.payload.ts_ms"
-        ).alias("ts_ms"),
-
-        get_json_object(
-            col("raw_payload"),
-            "$.payload.source"
-        ).alias("source_json"),
-
-        col("topic"),
-        col("partition"),
-        col("offset"),
-        col("timestamp"),
-
-        col("raw_payload")
-    )
+    if replay:
+        bronze_decoded_df = bronze_decoded_df.select(
+            get_json_object(
+                                  col("raw_payload"),
+                                  "$.payload.before"
+                              ).alias("before_json"),
+                      
+                              get_json_object(
+                                  col("raw_payload"),
+                                  "$.payload.after"
+                              ).alias("after_json"),
+                      
+                              get_json_object(
+                                  col("raw_payload"),
+                                  "$.payload.op"
+                              ).alias("op"),
+                      
+                              get_json_object(
+                                  col("raw_payload"),
+                                  "$.payload.ts_ms"
+                              ).alias("ts_ms"),
+                      
+                              get_json_object(
+                                  col("raw_payload"),
+                                  "$.payload.source"
+                              ).alias("source_json"),
+                              col("event_id"),
+                      
+                              col("topic"),
+                              col("partition"),
+                              col("offset"),
+                              col("timestamp"),
+                              col("key"),
+                      
+                              col("raw_payload"),
+                              col("timestampType")
+                          )
+        
+    else:
+        cdc_df = bronze_decoded_df.select(
+            
+                    get_json_object(
+                        col("raw_payload"),
+                        "$.payload.before"
+                    ).alias("before_json"),
+            
+                    get_json_object(
+                        col("raw_payload"),
+                        "$.payload.after"
+                    ).alias("after_json"),
+            
+                    get_json_object(
+                        col("raw_payload"),
+                        "$.payload.op"
+                    ).alias("op"),
+            
+                    get_json_object(
+                        col("raw_payload"),
+                        "$.payload.ts_ms"
+                    ).alias("ts_ms"),
+            
+                    get_json_object(
+                        col("raw_payload"),
+                        "$.payload.source"
+                    ).alias("source_json"),
+                    
+            
+                    col("topic"),
+                    col("partition"),
+                    col("offset"),
+                    col("timestamp"),
+                    col("key"),
+            
+                    col("raw_payload"),
+                    col("timestampType")
+                )
     logger.info("Debezium Parser Completed")
     #Test timestamp col values
     '''

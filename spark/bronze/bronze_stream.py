@@ -22,8 +22,8 @@ from framework.logging.logger import get_logger
 
 def main():
 
-    #get entity name and environment from command line arguments
-    
+    #get entity name and environment from command line argument
+   
 
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -33,99 +33,118 @@ def main():
     )
     args = parser.parse_args()
     entity_name = args.entity
-
-    #Read environment variable for ENV, default to "local" if not set
+     #logging configs
     env = os.getenv("ENV", "local")
-    print(f"Environment: {env}")
-
-    print(f"Starting Bronze Stream for Entity: {entity_name}")
-
-    
-
-    #Load configuration for environment and entity
+     #Load configuration for environment and entity
     env_config = load_config(env)
     entity_config = load_entity_config(entity_name)
-
-    #logging configs
+    
     logger = get_logger(
-    f"bronze_Stream/{entity_name}",
-    env_config
-    )
+            f"bronze_Stream/{entity_name}",
+            env_config
+            )
+   
 
-    ##Read configuration values for Kafka, root folder for storage paths and checkpoint paths from the loaded configurations
-    bootstrap_servers = env_config["kafka"]["bootstrap_servers"]
-    topic = entity_config["source"]["topic"]
-    bronze_root = env_config["storage"]["bronze_root_path"]
-    checkpoint_path = f"{env_config['storage']['checkpoint_root_path']}/bronze/{entity_config['entity_name']}"
-    #Bronze schema path
-    bronze_schema_path = PROJECT_ROOT / "configs" / "framework" / "bronze_schema.yaml"
-    
+    try:
+        #Read environment variable for ENV, default to "local" if not set
+        
+        print(f"Environment: {env}")
 
-    #create the bronze path using the entity name from the entity configuration
-    bronze_path = (
-        f"{bronze_root}/"
-        f"{entity_config['entity_name']}"
-    )
-    
-    
+        print(f"Starting Bronze Stream for Entity: {entity_name}")
 
-    #create Spark Session
-    spark = create_spark_session("Bronze Stream", env)
+        
 
-    print("Spark Session Created")
-    '''
-    #Test if spark is able to write to path in GCS
-    spark.range(10).write.mode("overwrite").parquet(
-    "gs://insightflowai-data-prod/test/"
-    )
-    '''
-    bronze_schema = load_platform_schema(bronze_schema_path)
-    catalog = env_config["iceberg"]["catalog_name"]
-    bronze_table = f"{catalog}.bronze.{entity_name}"
-    ensure_namespace_exists(
-        spark,
-        catalog,
-        "bronze"
-    )
-    create_table_if_not_exists(
-        spark,
-        catalog,
-        "bronze",
-        entity_name,
-        bronze_schema
+        
 
-    )
+        
+        ##Read configuration values for Kafka, root folder for storage paths and checkpoint paths from the loaded configurations
+        bootstrap_servers = env_config["kafka"]["bootstrap_servers"]
+        topic = entity_config["source"]["topic"]
+        bronze_root = env_config["storage"]["bronze_root_path"]
+        checkpoint_path = f"{env_config['storage']['checkpoint_root_path']}/bronze/{entity_config['entity_name']}"
+        #Bronze schema path
+        bronze_schema_path = PROJECT_ROOT / "configs" / "framework" / "bronze_schema.yaml"
+        
 
-    
-
-    #Read data from Kafka topic and write to Bronze layer in Parquet format
-    df = (
-        spark.readStream
-        .format("kafka")
-        .option("kafka.bootstrap.servers", bootstrap_servers)
-        .option("subscribe", topic)
-        .option("startingOffsets", "earliest")
-        .load()
-    )
-    print("Kafka Stream Created")
-
-    df.printSchema()
-
-    #write to Iceberg Bronze table
-    query = (df.writeStream.foreachBatch(
-        lambda batch_df, batch_id: write_to_iceberg(
-            batch_df,
-            batch_id,
-            bronze_table,
-            mode="append"
+        #create the bronze path using the entity name from the entity configuration
+        bronze_path = (
+            f"{bronze_root}/"
+            f"{entity_config['entity_name']}"
         )
-    ).option("checkpointLocation", checkpoint_path)
-    .start()
-    )
+        
+        
 
-    print("Bronze Streaming Query Started")
-    query.awaitTermination()
+        #create Spark Session
+        spark = create_spark_session("Bronze Stream", env, logger)
 
+        print("Spark Session Created")
+        '''
+        #Test if spark is able to write to path in GCS
+        spark.range(10).write.mode("overwrite").parquet(
+        "gs://insightflowai-data-prod/test/"
+        )
+        '''
+        bronze_schema = load_platform_schema(bronze_schema_path, logger=logger)
+        catalog = env_config["iceberg"]["catalog_name"]
+        bronze_table = f"{catalog}.bronze.{entity_name}"
+        ensure_namespace_exists(
+            spark,
+            catalog,
+            "bronze",
+            logger
+
+        )
+        create_table_if_not_exists(
+            spark,
+            catalog,
+            "bronze",
+            entity_name,
+            bronze_schema,
+            logger
+
+        )
+
+        
+
+        #Read data from Kafka topic and write to Bronze layer in Parquet format
+        df = (
+            spark.readStream
+            .format("kafka")
+            .option("failOnDataLoss", False)
+            .option("kafka.bootstrap.servers", bootstrap_servers)
+            .option("subscribe", topic)
+            .option("startingOffsets", "earliest")
+            .load()
+        )
+        print("Kafka Stream Created")
+
+        df.printSchema()
+
+        #write to Iceberg Bronze table
+        query = (df.writeStream.foreachBatch(
+            lambda batch_df, batch_id: write_to_iceberg(
+                batch_df,
+                batch_id,
+                bronze_table,
+                mode="append",
+                logger= logger
+            )
+        ).option("checkpointLocation", checkpoint_path)
+
+        .start()
+        )
+
+        print("Bronze Streaming Query Started")
+        query.awaitTermination()
+    except Exception as e:
+        if logger:
+            logger.error(
+                f"[FATAL] Bronze Streaming Pipeline failed for entity '{entity_name}': {str(e)}",
+                exc_info=True
+            )
+        else:
+            print(f"[FATAL ERROR] Pipeline startup failed before logger initialized: {str(e)}")
+        sys.exit(1)
 
 if __name__ == "__main__":
     main()

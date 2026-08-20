@@ -16,6 +16,9 @@ def load_platform_schema(schema_path: str, logger=None) -> dict:
     """
     #schema_path = PROJECT_ROOT / "configs" / "framework" / f"{schema_name}_schema.yaml"
     if not schema_path.exists():
+        error_message = f"Schema file not found: {schema_path}"
+        if logger:
+            logger.error(error_message)
         raise FileNotFoundError(f"Schema file not found: {schema_path}")
     
     

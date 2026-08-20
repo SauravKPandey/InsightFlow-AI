@@ -5,7 +5,7 @@ import yaml
 from pathlib import Path
 
 
-def load_entity_config(entity_name):
+def load_entity_config(entity_name, logger=None):
     """
     Load entity-specific configuration from a YAML file.
 
@@ -20,6 +20,9 @@ def load_entity_config(entity_name):
     file_path = project_root / "configs" / "entities"/f"{entity_name}.yaml"
 
     if not file_path.exists():
+        error_message = f"Entity configuration file not found: {file_path}"
+        if logger:
+            logger.error(error_message)
         raise FileNotFoundError(f"Entity configuration file not found: {file_path}")    
 
     with open(file_path, 'r') as file:

@@ -41,7 +41,9 @@ def normalize_section(df: DataFrame, metadata_dict: dict, logger=None):
             )
 
         else:
-
+            error_msg = f"Unsupported source format: {source_format} for column: {column_name}"
+            if logger:
+                logger.error(error_msg)
             raise ValueError(
                 f"Unsupported source format: {source_format}"
             )

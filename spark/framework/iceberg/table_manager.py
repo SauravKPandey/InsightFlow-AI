@@ -28,14 +28,19 @@ def ensure_namespace_exists(
         catalog (str): The name of the catalog.
         namespace (str): The name of the namespace to ensure exists.
     """
-    # Check if the namespace exists
-    existing_namespaces = spark.sql(f"SHOW NAMESPACES IN {catalog}").collect()
-    existing_namespace_names = [row[0] for row in existing_namespaces]
+    try:
 
-    if namespace not in existing_namespace_names:
-        # Create the namespace if it does not exist
-        spark.sql(f"CREATE NAMESPACE {catalog}.{namespace}")
-        logger.info(f"Namespace '{namespace}' created in catalog '{catalog}'.") 
+        # Check if the namespace exists
+        existing_namespaces = spark.sql(f"SHOW NAMESPACES IN {catalog}").collect()
+        existing_namespace_names = [row[0] for row in existing_namespaces]
+
+        if namespace not in existing_namespace_names:
+            # Create the namespace if it does not exist
+            spark.sql(f"CREATE NAMESPACE {catalog}.{namespace}")
+            logger.info(f"Namespace '{namespace}' created in catalog '{catalog}'.") 
+    except Exception as e:
+        logger.error(f"Error ensuring namespace '{namespace}' exists in catalog '{catalog}': {e}")
+        raise e
 
 def build_iceberg_table_cols(schema: dict, column_type: str)-> list[str]:
     columns = []
@@ -165,6 +170,7 @@ def write_to_iceberg(
     print("=" * 80)
 
     if batch_df.isEmpty():
+        logger.info(f"Batch {batch_id} is empty. Skipping.")
         print(f"Batch {batch_id} is empty. Skipping.")
         return
 
@@ -185,12 +191,18 @@ def write_to_iceberg(
             )
 
         elif mode == "merge":
+            error_msg = "Merge mode will be implemented during SCD2."
+            if logger:
+                logger.error(error_msg)
 
             raise NotImplementedError(
                 "Merge mode will be implemented during SCD2."
             )
 
         else:
+            error_msg = f"Unsupported write mode: {mode}"
+            if logger:
+                logger.error(error_msg)
 
             raise ValueError(
                 f"Unsupported write mode: {mode}"
@@ -202,4 +214,4 @@ def write_to_iceberg(
 
         logger.error(f"Failed Batch : {batch_id}")
 
-        raise e
+        raise e 

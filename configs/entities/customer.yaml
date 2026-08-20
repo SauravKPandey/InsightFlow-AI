@@ -41,6 +41,9 @@ columns:
       - Gold
       - Platinum
       - Silver
+      - Diamond
+      - GOLD
+      - LOCAL TESTING
 
   customer_start_date:
     datatype: date

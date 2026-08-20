@@ -21,7 +21,7 @@ def get_logger(
     log_level = env_config["logging"]["level"].upper()
 
     logger.setLevel(
-        getattr(logging, log_level)
+        getattr(logging, log_level, logging.INFO)
     )
 
     logger.propagate = False

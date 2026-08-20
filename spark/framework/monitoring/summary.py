@@ -4,14 +4,15 @@ from pyspark.sql.functions import col, explode
 from framework.logging.logger import get_logger
 from framework.validation.constants import VALIDATION_ERROR_COLUMN
 
-logger = get_logger(__name__)
+#logger = get_logger(__name__)
 
 
 def summarize(
     valid_df: DataFrame,
     invalid_df: DataFrame,
     entity_name: str,
-    batch_id: int
+    batch_id: int,
+    logger: None
 ) -> dict:
     """
     Log validation summary for every micro-batch.

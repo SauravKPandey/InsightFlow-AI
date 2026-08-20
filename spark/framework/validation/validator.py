@@ -27,7 +27,8 @@ VALIDATORS = {
 }
 def validate(
         df: DataFrame,
-        entity_config: dict
+        entity_config: dict,
+        logger=None
 )-> tuple[DataFrame, DataFrame]:
     
     """
@@ -45,6 +46,7 @@ def validate(
     df = df.withColumn("Validation_Error", lit(None).cast(VALIDATION_ERROR_SCHEMA))
 
     for validator in VALIDATORS:
+        logger.info(f"Running validation using {validator.__name__}...")
         df = validator(df, entity_config)
 
     

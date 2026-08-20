@@ -9,11 +9,11 @@ from pyspark.sql import DataFrame
 from pyspark.sql.functions import from_json, col
 from framework.transformation.normalizer import normalize
 
-def map_entity(cdc_df : DataFrame, entity_config: dict, logger=None) -> DataFrame:
+def map_entity(cdc_df : DataFrame, entity_config: dict, logger=None, replay = False) -> DataFrame:
     
     logger.info("Running Entity Mapper")
     #Fetch the entity schema from the entity configuration using the generate_schema function
-    entity_schema = generate_schema(entity_config)
+    entity_schema = generate_schema(entity_config, logger=logger)
 
   
 
@@ -28,13 +28,30 @@ def map_entity(cdc_df : DataFrame, entity_config: dict, logger=None) -> DataFram
     system_columns = [col(column_name) for column_name in entity_config.get("system_columns", {})]
 
     #Select the business columns from the entity DataFrame
-    mapped_df = entity_df.select(*business_columns,
-                                 *system_columns,
-                                 col("topic"),
-                                 col("partition"),
-                                 col("offset"),
-                                 col("timestamp")
-                                )
+    if replay:
+        mapped_df = entity_df.select(*business_columns,
+                                    *system_columns,
+                                    col("event_id"),
+                                    col("topic"),
+                                    col("partition"),
+                                    col("offset"),
+                                    col("timestamp"),
+                                    col("key"),
+                                    col("raw_payload"),
+                                    col("timestampType")
+                                    )
+    else:
+        mapped_df = entity_df.select(*business_columns,
+                                            *system_columns,
+                                            #col("event_id"),
+                                            col("topic"),
+                                            col("partition"),
+                                            col("offset"),
+                                            col("timestamp"),
+                                            col("key"),
+                                            col("raw_payload"),
+                                            col("timestampType")
+                                            )
     ''' 
     mapped_df.printSchema()
 

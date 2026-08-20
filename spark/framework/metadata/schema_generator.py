@@ -19,7 +19,7 @@ TYPE_MAPPING = {
     "timestamp": TimestampType,
     }
 
-def generate_schema(entity_config):    
+def generate_schema(entity_config, logger=None):    
     """
     Generate a schema based on the entity configuration.
     """
@@ -28,6 +28,9 @@ def generate_schema(entity_config):
         source_format = metadata.get("source_format")
         data_type = metadata.get("datatype", "string").lower()
         if data_type not in TYPE_MAPPING:
+            error_msg = f"Unsupported data type: {data_type} for column: {column_name}"
+            if logger:
+                logger.error(error_msg)
             raise ValueError(f"Unsupported data type: {data_type} for column: {column_name}")
         if source_format == "epoch_micros":
             spark_data_type = LongType()
